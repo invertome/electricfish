@@ -18,17 +18,15 @@ keep <- filterByExpr(y)
 y <- y[keep, , keep.lib.sizes=FALSE]
 
 # Normalize the data
-y <- calcNormFactors(y)
+y <- calcNormFactors(y, method = "TMM")
 
-# Estimate dispersions
-y <- estimateDisp(y)
+# Perform voom transformation
+v <- voom(y, normalize.method = "none", plot = TRUE)
 
-# Transform the data to log2-CPM and perform voom transformation
+# Fit linear model
 design <- model.matrix(~0 + group(y))
-v <- voom(y, design, plot = FALSE)
-
-# Fit the linear model
 fit <- lmFit(v, design)
+fit2 <- eBayes(fit)
 
 # Define the contrasts of interest
 contr.matrix <- makeContrasts(
@@ -46,11 +44,12 @@ contr.matrix <- makeContrasts(
 )
 
 # Perform the comparisons and store the results
-fit2 <- contrasts.fit(fit, contr.matrix)
-fit2 <- eBayes(fit2)
 results_list <- list()
 for (cname in colnames(contr.matrix)) {
-  res <- topTable(fit2, coef = cname, n = Inf, adjust.method = "BH")
+  contrast <- contr.matrix[, cname]
+  fit2_contrast <- contrasts.fit(fit2, contrast)
+  fit2_contrast <- eBayes(fit2_contrast)
+  res <- topTable(fit2_contrast, n = Inf, adjust.method = "BH", sort.by = "none")
   results_list[[cname]] <- res
 }
 
@@ -59,6 +58,10 @@ all_res <- bind_rows(results_list, .id = "comparison")
 
 # Write the results to a CSV file
 write.csv(all_res, "limma_voom_results.csv")
+
+# Use decideTests to summarize differentially expressed genes across contrasts
+decideTests_res <- decideTests(fit2, method = "separate", adjust.method = "BH", p.value = 0.05)
+summary(decideTests_res)
 
 # PCA plot
 logcpm <- cpm(y, log = TRUE)
@@ -106,6 +109,17 @@ bar_plot <- ggplot(data.frame(Comparison = names(num_de_genes), Num_DE_Genes = n
   ggtitle("Number of Differentially Expressed Genes per Comparison") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("bar_plot_num_de_genes.png", bar_plot, width = 10, height = 8)
+
+
+# MD plots for each comparison
+md_plots <- list()
+for (cname in colnames(contr.matrix)) {
+  res <- results_list[[cname]]
+  md_data <- data.frame(AveExpr = res$AveExpr, logFC = res$logFC, adjpvalue = res$adj.P.Val, Gene = rownames(res))
+  md_plot <- plotMD(fit2, contrast = cname, status = decideTests_res[, cname], main = paste0("MD plot: ", cname), xlim = c(min(md_data$AveExpr) - 0.5, max(md_data$AveExpr) + 0.5))
+  md_plots[[cname]] <- md_plot
+  ggsave(paste0("md_plot_", cname, ".png"), md_plot, width = 10, height = 8)
+}
 
 # Heatmap visualization
 # Find top 50 differentially expressed genes across all contrasts
