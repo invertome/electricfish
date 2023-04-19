@@ -20,13 +20,13 @@ echo "sample,condition" > $SAMPLE_METADATA
 # Function to classify samples based on their filenames
 classify_condition() {
     if [[ $1 == *"[Ss]aline"* && $1 == *"[Ff]ooddep"* ]]; then
-        echo "Saline_FoodDep"
+        echo "saline_fooddep"
     elif [[ $1 == *"[Ss]aline"* && ($1 == *"[Aa]d"*"lib"* || $1 == *"[Aa]dlib"*) ]]; then
-        echo "Saline_adlib"
+        echo "saline_adlib"
     elif [[ $1 == *"[Ll]eptin"* && $1 == *"[Ff]ooddep"* ]]; then
-        echo "Leptin_fooddep"
+        echo "leptin_fooddep"
     elif [[ $1 == *"[Ll]eptin"* && ($1 == *"[Aa]d"*"lib"* || $1 == *"[Aa]dlib"*) ]]; then
-        echo "Leptin_adlib"
+        echo "leptin_adlib"
     else
         echo "Unknown"
     fi
