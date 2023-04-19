@@ -44,10 +44,8 @@ for READ1 in *trim.1.cor.fq.gz; do
     # Add sample metadata to the sample metadata file
     echo "${SAMPLE_NAME},${CONDITION}" >> $SAMPLE_METADATA
 
-    # Create a directory for the output of the sample
-    mkdir -p $SAMPLE_NAME
-
-    # Run Salmon quant for the sample
+   # Run Salmon quant for the sample
+    mkdir -p "salmon_output/$SAMPLE_NAME"
     $SALMON quant -i transcriptome_index -l A -1 $READ1 -2 $READ2 -o "salmon_output/$SAMPLE_NAME" --gcBias --validateMappings
 done
 
@@ -55,7 +53,7 @@ done
 find salmon_output -name "quant.sf" -exec tail -n +2 {} \; | sort -k1,1 | paste - - -d , > "temp_counts.txt"
 
 # Calculate the number of samples
-num_samples=$(ls *trim.1.cor.fq.gz | wc -l)
+num_samples=$(find . -maxdepth 1 -type f -name "*trim.1.cor.fq.gz" | wc -l)
 
 # Create the final count matrix file with the header
 {
@@ -71,3 +69,10 @@ num_samples=$(ls *trim.1.cor.fq.gz | wc -l)
 
 # Remove the temporary file
 rm "temp_counts.txt"
+
+
+
+
+
+
+
