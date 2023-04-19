@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Path to the transcriptome fasta file
-TRANSCRIPTOME="path/to/transcriptome.fasta"
+TRANSCRIPTOME="/mnt/c/Users/Mexic/Desktop/mehrnoush/Eigenmannia_virescens.clean.99.mrna"
 
 # Path to the Salmon executable
-SALMON="/path/to/salmon"
+SALMON="/home/jorgepm/miniconda/bin/salmon"
 
 # Index the transcriptome
 $SALMON index -t $TRANSCRIPTOME -i transcriptome_index
