@@ -48,19 +48,26 @@ for READ1 in *trim.1.cor.fq.gz; do
     mkdir -p $SAMPLE_NAME
 
     # Run Salmon quant for the sample
-    $SALMON quant -i transcriptome_index -l A -1 $READ1 -2 $READ2 -o $SAMPLE_NAME --gcBias --validateMappings
+    $SALMON quant -i transcriptome_index -l A -1 $READ1 -2 $READ2 -o "salmon_output/$SAMPLE_NAME" --gcBias --validateMappings
 done
-
-# Function to extract count from a single file
-extract_count() {
-    grep -m1 -w $1 $2/quant.sf | awk '{print $4}'
-}
 
 # Aggregate the count data from each sample
-for TRANSCRIPT in $(cut -f1 ${SAMPLE_NAME}/quant.sf | tail -n +2); do
-    COUNTS=$(paste -d, <(printf "${TRANSCRIPT}") <(paste -d, -s <(for SAMPLE_DIR in *trim.1.cor.fq.gz; do
-        SAMPLE_NAME=$(echo $SAMPLE_DIR | cut -d '.' -f1)
-        extract_count $TRANSCRIPT $SAMPLE_NAME
-    done)))
-    echo "${COUNTS}" >> $COUNT_MATRIX
-done
+find salmon_output -name "quant.sf" -exec tail -n +2 {} \; | sort -k1,1 | paste - - -d , > "temp_counts.txt"
+
+# Calculate the number of samples
+num_samples=$(ls *trim.1.cor.fq.gz | wc -l)
+
+# Create the final count matrix file with the header
+{
+  echo "transcript_id$(printf ',%s' *trim.1.cor.fq.gz | sed 's/.trim.1.cor.fq.gz//g')"
+  cat "temp_counts.txt" | awk -F, -v num_samples=$num_samples '{
+    line = $1
+    for (i = 1; i <= num_samples; i++) {
+      line = line "," $(4 * i)
+    }
+    print line
+  }'
+} > $COUNT_MATRIX
+
+# Remove the temporary file
+rm "temp_counts.txt"
