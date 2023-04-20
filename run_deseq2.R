@@ -29,15 +29,14 @@ custom_tximport <- function(counts_list, tx2gene) {
 # Create a Tximport object using the custom function
 txi <- custom_tximport(counts_list, tx2gene)
 
-# Summarize the transcript-level data
-txi <- summarizeToGene(txi, tx2gene)
+# Remove the tx2gene element, as it's not needed for gene-level data
+txi$tx2gene <- NULL
 
 # Convert the summarized data to a DESeqDataSet object with the simplified design formula
 dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection + Tissue:Feeding + Injection:Feeding)
 
 # Normalize and perform DESeq2 analysis
 dds <- DESeq(dds)
-
 
 # PCA plot
 vsd <- vst(dds)
