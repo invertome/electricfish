@@ -7,7 +7,7 @@ library(pheatmap)
 library(tximport)
 
 # Read the sample metadata file
-sample_metadata <- read.csv("Sample_Metadata.csv")
+sample_metadata <- read.csv("Sample_Metadata.csv", stringsAsFactors = FALSE)
 
 # Check if the sample metadata is read correctly
 print(sample_metadata)
@@ -31,13 +31,11 @@ tx2gene <- data.frame(transcript = transcript_ids, gene = gene_ids)
 # Import the transcript-level data using tximport
 txi <- tximport(salmon_files, type = "salmon", txOut = TRUE, tx2gene = tx2gene)
 
-
 # Convert the summarized data to a DESeqDataSet object
-dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
+dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection * Feeding)
 
 # Normalize and perform DESeq2 analysis
 dds <- DESeq(dds)
-
 
 # PCA plot
 vsd <- vst(dds)
