@@ -18,6 +18,16 @@ salmon_files <- file.path("salmon_output", sample_metadata$SampleID, "quant.sf")
 # Check if the salmon_files variable is populated correctly
 print(salmon_files)
 
+# Load the first quant.sf file
+first_quant_file <- read_tsv(salmon_files[1], col_types = cols())
+
+# Extract transcript and gene IDs
+transcript_ids <- first_quant_file$Name
+gene_ids <- gsub("(t\\d+)$", "", transcript_ids)
+
+# Create the tx2gene object
+tx2gene <- data.frame(transcript = transcript_ids, gene = gene_ids)
+
 # Import the transcript-level data using tximport
 txi <- tximport(salmon_files, type = "salmon", txOut = TRUE, tx2gene = tx2gene)
 
