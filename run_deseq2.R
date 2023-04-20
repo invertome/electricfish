@@ -15,14 +15,18 @@ transcript_ids <- rownames(count_matrix)
 gene_ids <- gsub("t\\d+$", "", transcript_ids)
 tx2gene <- data.frame(transcript = transcript_ids, gene = gene_ids)
 
+# Import the non-integer count matrix as a list
+counts_list <- list(counts = as.matrix(count_matrix))
+
 # Import and summarize the transcript-level data using tximport
-txi <- tximport(count_matrix, type = "none", txOut = TRUE, tx2gene = tx2gene)
+txi <- tximport(counts_list, type = "none", txOut = TRUE, tx2gene = tx2gene, countsFromAbundance = "no")
 
 # Convert the summarized data to a DESeqDataSet object
 dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
 
 # Normalize and perform DESeq2 analysis
 dds <- DESeq(dds)
+
 
 # PCA plot
 vsd <- vst(dds)
