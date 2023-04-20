@@ -32,8 +32,8 @@ txi <- custom_tximport(counts_list, tx2gene)
 # Summarize the transcript-level data
 txi <- summarizeToGene(txi, tx2gene)
 
-# Convert the summarized data to a DESeqDataSet object
-dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
+# Convert the summarized data to a DESeqDataSet object with the simplified design formula
+dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection + Tissue:Feeding + Injection:Feeding)
 
 # Normalize and perform DESeq2 analysis
 dds <- DESeq(dds)
