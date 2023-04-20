@@ -6,35 +6,17 @@ library(ggrepel)
 library(pheatmap)
 library(tximport)
 
-# Read the count matrix and sample metadata files
-count_matrix <- read.csv("Count_Matrix.csv", row.names = 1)
+# Read the sample metadata file
 sample_metadata <- read.csv("Sample_Metadata.csv")
 
-# Create the tx2gene data frame
-transcript_ids <- rownames(count_matrix)
-gene_ids <- gsub("t\\d+$", "", transcript_ids)
-tx2gene <- data.frame(transcript = transcript_ids, gene = gene_ids)
+# Define the path to the Salmon output files for each sample
+salmon_files <- file.path("salmon_output", sample_metadata$SampleName, "quant.sf")
 
-# Import the non-integer count matrix as a list
-counts_list <- list(counts = as.matrix(count_matrix))
+# Import the transcript-level data using tximport
+txi <- tximport(salmon_files, type = "salmon", txOut = TRUE, tx2gene = tx2gene)
 
-# Custom function to create a Tximport object
-custom_tximport <- function(counts_list, tx2gene) {
-  list(abundance = counts_list$counts,
-       counts = counts_list$counts,
-       length = NULL,
-       tx2gene = tx2gene,
-       countsFromAbundance = "no")
-}
-
-# Create a Tximport object using the custom function
-txi <- custom_tximport(counts_list, tx2gene)
-
-# Remove the tx2gene element, as it's not needed for gene-level data
-txi$tx2gene <- NULL
-
-# Convert the summarized data to a DESeqDataSet object with the simplified design formula
-dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection + Tissue:Feeding + Injection:Feeding)
+# Convert the summarized data to a DESeqDataSet object
+dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
 
 # Normalize and perform DESeq2 analysis
 dds <- DESeq(dds)
