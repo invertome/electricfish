@@ -22,8 +22,10 @@ y <- calcNormFactors(y)
 # Estimate dispersions
 y <- estimateDisp(y)
 
+
 # Perform quasi-likelihood F-test
-fit <- glmQLFit(y, design = model.matrix(~0 + group(y)))
+design <- model.matrix(~0 + y$group)
+fit <- glmQLFit(y, design = design)
 qlf <- glmQLFTest(fit, coef = 2)
 
 # Define the contrasts of interest
