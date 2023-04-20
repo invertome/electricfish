@@ -50,7 +50,7 @@ for READ1 in *trim.1.cor.fq.gz; do
 done
 
 # Aggregate the count data from each sample
-find salmon_output -name "quant.sf" -exec tail -n +2 {} \; | sort -k1,1 | paste - - -d , > "temp_counts.txt"
+find salmon_output -name "quant.sf" -exec awk 'NR>1 {print $1 "," $4}' {} \; | sort -k1,1 -t, > "temp_counts.txt"
 
 # Calculate the number of samples
 num_samples=$(find . -maxdepth 1 -type f -name "*trim.1.cor.fq.gz" | wc -l)
@@ -58,17 +58,22 @@ num_samples=$(find . -maxdepth 1 -type f -name "*trim.1.cor.fq.gz" | wc -l)
 # Create the final count matrix file with the header
 {
   echo "transcript_id$(printf ',%s' *trim.1.cor.fq.gz | sed 's/.trim.1.cor.fq.gz//g')"
-  cat "temp_counts.txt" | awk -F, -v num_samples=$num_samples '{
+  awk -F, -v num_samples=$num_samples '{
     line = $1
-    for (i = 1; i <= num_samples; i++) {
-      line = line "," $(4 * i)
+    counts[$1] = counts[$1] "," $2
+    count_per_transcript[$1]++
+  } END {
+    for (transcript in counts) {
+      if (count_per_transcript[transcript] == num_samples) {
+        print transcript counts[transcript]
+      }
     }
-    print line
-  }'
+  }' "temp_counts.txt"
 } > $COUNT_MATRIX
 
 # Remove the temporary file
 rm "temp_counts.txt"
+
 
 
 
