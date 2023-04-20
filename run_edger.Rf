@@ -38,7 +38,7 @@ contr.matrix <- makeContrasts(
   EO_saline_fooddep_vs_SM_saline_fooddep = "EO_saline_fooddep - SM_saline_fooddep",
   EO_leptin_adlib_vs_SM_leptin_adlib = "EO_leptin_adlib - SM_leptin_adlib",
   EO_saline_adlib_vs_SM_saline_adlib = "EO_saline_adlib - SM_saline_adlib",
-  levels = group(y)
+  levels = groups(y)
 )
 
 # Perform the comparisons and store the results
