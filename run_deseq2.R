@@ -18,8 +18,19 @@ tx2gene <- data.frame(transcript = transcript_ids, gene = gene_ids)
 # Import the non-integer count matrix as a list
 counts_list <- list(counts = as.matrix(count_matrix))
 
-# Import and summarize the transcript-level data using tximportData
-txi <- tximportData(counts_list, txOut = TRUE, tx2gene = tx2gene)
+# Custom function to create a Tximport object
+custom_tximport <- function(counts_list, tx2gene) {
+  list(abundance = counts_list$counts,
+       counts = counts_list$counts,
+       length = matrix(0, nrow = nrow(counts_list$counts), ncol = ncol(counts_list$counts)),
+       tx2gene = tx2gene)
+}
+
+# Create a Tximport object using the custom function
+txi <- custom_tximport(counts_list, tx2gene)
+
+# Summarize the transcript-level data
+txi <- summarizeToGene(txi, tx2gene)
 
 # Convert the summarized data to a DESeqDataSet object
 dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
