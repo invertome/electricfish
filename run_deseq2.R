@@ -4,15 +4,22 @@ library(tidyverse)
 library(ggplot2)
 library(ggrepel)
 library(pheatmap)
+library(tximport)
 
 # Read the count matrix and sample metadata files
 count_matrix <- read.csv("Count_Matrix.csv", row.names = 1)
 sample_metadata <- read.csv("Sample_Metadata.csv")
 
-# Convert the count matrix to a DESeqDataSet object
-dds <- DESeqDataSetFromMatrix(countData = count_matrix,
-                              colData = sample_metadata,
-                              design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
+# Create the tx2gene data frame
+transcript_ids <- rownames(count_matrix)
+gene_ids <- gsub("t\\d+$", "", transcript_ids)
+tx2gene <- data.frame(transcript = transcript_ids, gene = gene_ids)
+
+# Import and summarize the transcript-level data using tximport
+txi <- tximport(count_matrix, type = "none", txOut = TRUE, tx2gene = tx2gene)
+
+# Convert the summarized data to a DESeqDataSet object
+dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
 
 # Normalize and perform DESeq2 analysis
 dds <- DESeq(dds)
