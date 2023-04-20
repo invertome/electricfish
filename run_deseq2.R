@@ -58,16 +58,16 @@ ggsave("PCA_plot.png", width = 10, height = 8)
 
 # Define the comparisons of interest
 contrasts <- list(
-  "EO_leptin_fooddep_vs_EO_saline_fooddep" = c("Tissue_Interaction_Feeding", "EO_leptin_fooddep", "EO_saline_fooddep"),
-  "EO_leptin_adlib_vs_EO_saline_adlib" = c("Tissue_Interaction_Feeding", "EO_leptin_adlib", "EO_saline_adlib"),
-  "EO_leptin_fooddep_vs_EO_leptin_adlib" = c("Tissue_Interaction_Feeding", "EO_leptin_fooddep", "EO_leptin_adlib"),
-  "SM_leptin_fooddep_vs_SM_saline_fooddep" = c("Tissue_Interaction_Feeding", "SM_leptin_fooddep", "SM_saline_fooddep"),
-  "SM_leptin_adlib_vs_SM_saline_adlib" = c("Tissue_Interaction_Feeding", "SM_leptin_adlib", "SM_saline_adlib"),
-  "SM_leptin_fooddep_vs_SM_leptin_adlib" = c("Tissue_Interaction_Feeding", "SM_leptin_fooddep", "SM_leptin_adlib"),
-  "EO_leptin_fooddep_vs_SM_leptin_fooddep" = c("Tissue_Interaction_Feeding", "EO_leptin_fooddep", "SM_leptin_fooddep"),
-  "EO_saline_fooddep_vs_SM_saline_fooddep" = c("Tissue_Interaction_Feeding", "EO_saline_fooddep", "SM_saline_fooddep"),
-  "EO_leptin_adlib_vs_SM_leptin_adlib" = c("Tissue_Interaction_Feeding", "EO_leptin_adlib", "SM_leptin_adlib"),
-  "EO_saline_adlib_vs_SM_saline_adlib" = c("Tissue_Interaction_Feeding", "EO_saline_adlib", "SM_saline_adlib")
+  "EO_leptin_fooddep_vs_EO_saline_fooddep" = c("Injection", "leptin", "saline"),
+  "EO_leptin_adlib_vs_EO_saline_adlib" = c("Injection", "leptin", "saline"),
+  "EO_leptin_fooddep_vs_EO_leptin_adlib" = c("Feeding", "fooddep", "adlib"),
+  "SM_leptin_fooddep_vs_SM_saline_fooddep" = c("Injection", "leptin", "saline"),
+  "SM_leptin_adlib_vs_SM_saline_adlib" = c("Injection", "leptin", "saline"),
+  "SM_leptin_fooddep_vs_SM_leptin_adlib" = c("Feeding", "fooddep", "adlib"),
+  "EO_leptin_fooddep_vs_SM_leptin_fooddep" = c("Tissue", "EO", "SM"),
+  "EO_saline_fooddep_vs_SM_saline_fooddep" = c("Tissue", "EO", "SM"),
+  "EO_leptin_adlib_vs_SM_leptin_adlib" = c("Tissue", "EO", "SM"),
+  "EO_saline_adlib_vs_SM_saline_adlib" = c("Tissue", "EO", "SM")
 )
 
 # Perform the comparisons and store the results
@@ -93,3 +93,56 @@ annotation <- as.data.frame(colData(rld)[, c("Tissue", "Injection", "Feeding")])
 rownames(annotation) <- rownames(colData(rld))
 pheatmap(assay(rld[, select_conditions]), annotation_col = annotation, show_colnames = FALSE)
 
+# Generate a volcano plot for each comparison
+volcano_plot <- function(res, comparison_name) {
+  res <- as.data.frame(res)
+  
+  ggplot(res, aes(x = log2FoldChange, y = -log10(pvalue), color = padj < 0.05)) +
+    geom_point(alpha = 0.6) +
+    theme_bw() +
+    ggtitle(paste0("Volcano plot: ", comparison_name)) +
+    xlab("Log2 fold change") +
+    ylab("-Log10 p-value") +
+    scale_color_manual(values = c("gray", "red"), name = "Significant") +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+    geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
+    ggrepel::geom_text_repel(
+      data = subset(res, padj < 0.05 & (abs(log2FoldChange) > 1)),
+      aes(label = rownames(res)),
+      size = 3,
+      force = 5
+    )
+  
+  ggsave(paste0("volcano_", comparison_name, ".png"), width = 10, height = 8)
+}
+
+lapply(names(results_list), function(name) {
+  volcano_plot(results_list[[name]], name)
+})
+
+# Generate an MA plot for each comparison
+ma_plot <- function(res, comparison_name) {
+  res <- as.data.frame(res)
+  
+  ggplot(res, aes(x = baseMean, y = log2FoldChange, color = padj < 0.05)) +
+    geom_point(alpha = 0.6) +
+    theme_bw() +
+    ggtitle(paste0("MA plot: ", comparison_name)) +
+    xlab("Mean expression (log scale)") +
+    ylab("Log2 fold change") +
+    scale_color_manual(values = c("gray", "red"), name = "Significant") +
+    scale_x_log10() +
+    geom_hline(yintercept = c(-1, 1), linetype = "dashed") +
+    ggrepel::geom_text_repel(
+      data = subset(res, padj < 0.05 & (abs(log2FoldChange) > 1)),
+      aes(label = rownames(res)),
+      size = 3,
+      force = 5
+    )
+  
+  ggsave(paste0("ma_", comparison_name, ".png"), width = 10, height = 8)
+}
+
+lapply(names(results_list), function(name) {
+  ma_plot(results_list[[name]], name)
+})
