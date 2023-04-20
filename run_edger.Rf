@@ -4,13 +4,15 @@ library(limma)
 library(ggplot2)
 library(ggrepel)
 library(heatmap3)
+library(dplyr)
 
 # Read the count matrix and sample metadata files
 count_matrix <- read.csv("Count_Matrix.csv", row.names = 1)
 sample_metadata <- read.csv("Sample_Metadata.csv")
 
 # Create DGEList object
-y <- DGEList(counts = count_matrix, group = factor(paste(sample_metadata$Tissue, sample_metadata$Injection, sample_metadata$Feeding, sep="_")))
+sample_groups <- factor(paste(sample_metadata$Tissue, sample_metadata$Injection, sample_metadata$Feeding, sep="_"))
+y <- DGEList(counts = count_matrix, group = sample_groups)
 
 # Filter out lowly expressed genes
 keep <- filterByExpr(y)
@@ -23,7 +25,8 @@ y <- calcNormFactors(y)
 y <- estimateDisp(y)
 
 # Perform quasi-likelihood F-test
-design <- model.matrix(~0 + groups(y))
+design <- model.matrix(~0 + sample_groups)
+colnames(design) <- levels(sample_groups)
 fit <- glmQLFit(y, design = design)
 qlf <- glmQLFTest(fit, coef = 2)
 
@@ -39,7 +42,7 @@ contr.matrix <- makeContrasts(
   EO_saline_fooddep_vs_SM_saline_fooddep = "EO_saline_fooddep - SM_saline_fooddep",
   EO_leptin_adlib_vs_SM_leptin_adlib = "EO_leptin_adlib - SM_leptin_adlib",
   EO_saline_adlib_vs_SM_saline_adlib = "EO_saline_adlib - SM_saline_adlib",
-  levels = groups(y)
+  levels = sample_groups
 )
 
 # Perform the comparisons and store the results
