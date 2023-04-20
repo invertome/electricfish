@@ -97,7 +97,8 @@ write.table(combined_results, file = "combined_DESeq2_results.tsv", sep = "\t", 
 
 
 # Write the results to a CSV file
-write.csv(all_res, "DESeq2_results.csv")
+write.csv(combined_results, "DESeq2_results.csv")
+
 
 # Generate the heatmap
 rld <- rlog(dds)
@@ -134,7 +135,7 @@ lapply(names(results_list), function(comparison_name) {
 })
 
 # Remove intermediate objects and perform garbage collection
-rm(all_res, rld, select_conditions, annotation, results_list)
+rm(combined_results, rld, select_conditions, annotation, results_list)
 gc()
 
 # Generate an MA plot for each comparison
