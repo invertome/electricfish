@@ -22,7 +22,7 @@ counts_list <- list(counts = as.matrix(count_matrix))
 custom_tximport <- function(counts_list, tx2gene) {
   list(abundance = counts_list$counts,
        counts = counts_list$counts,
-       length = matrix(0, nrow = nrow(counts_list$counts), ncol = ncol(counts_list$counts)),
+       length = NULL,
        tx2gene = tx2gene)
 }
 
@@ -37,6 +37,7 @@ dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissu
 
 # Normalize and perform DESeq2 analysis
 dds <- DESeq(dds)
+
 
 # PCA plot
 vsd <- vst(dds)
