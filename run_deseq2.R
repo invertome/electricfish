@@ -31,6 +31,10 @@ tx2gene <- data.frame(transcript = transcript_ids, gene = gene_ids)
 # Import the transcript-level data using tximport
 txi <- tximport(salmon_files, type = "salmon", txOut = TRUE, tx2gene = tx2gene)
 
+# Remove intermediate objects and perform garbage collection
+rm(first_quant_file, transcript_ids, gene_ids)
+gc()
+
 # Convert the summarized data to a DESeqDataSet object
 dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection * Feeding)
 
@@ -55,6 +59,9 @@ ggplot(pca_data, aes(PC1, PC2, color = Tissue, shape = Injection, linetype = Fee
   geom_text_repel(aes(label = rownames(pca_data)), force = 5)
 ggsave("PCA_plot.png", width = 10, height = 8)
 
+# Remove intermediate objects and perform garbage collection
+rm(vsd, pca_data, percentVar)
+gc()
 
 # Define the comparisons of interest
 contrasts <- list(
@@ -78,15 +85,8 @@ results_list <- lapply(contrasts, function(contrast) {
 
 names(results_list) <- names(contrasts)
 
-# Convert DESeqResults objects to data frames and add a comparison column
-results_df_list <- lapply(names(results_list), function(name) {
-  res_df <- as.data.frame(results_list[[name]])
-  res_df$comparison <- name
-  return(res_df)
-})
-
 # Combine the results into a single data frame
-all_res <- bind_rows(results_df_list)
+all_res <- bind_rows(results_list, .id = "comparison")
 
 # Write the results to a CSV file
 write.csv(all_res, "DESeq2_results.csv")
@@ -114,18 +114,20 @@ volcano_plot <- function(res, comparison_name) {
     geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
     geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
     ggrepel::geom_text_repel(
-      data = subset(res, padj < 0.05 & (abs(log2FoldChange) > 1)),
+      data = subset(res, padj < 0.05 & abs(log2FoldChange) > 1),
       aes(label = rownames(res)),
-      size = 3,
       force = 5
     )
-  
-  ggsave(paste0("volcano_", comparison_name, ".png"), width = 10, height = 8)
+  ggsave(paste0("Volcano_plot_", comparison_name, ".png"), width = 10, height = 8)
 }
 
-lapply(names(results_list), function(name) {
-  volcano_plot(results_list[[name]], name)
+lapply(names(results_list), function(comparison_name) {
+  volcano_plot(results_list[[comparison_name]], comparison_name)
 })
+
+# Remove intermediate objects and perform garbage collection
+rm(all_res, rld, select_conditions, annotation, results_list)
+gc()
 
 # Generate an MA plot for each comparison
 ma_plot <- function(res, comparison_name) {
@@ -135,21 +137,22 @@ ma_plot <- function(res, comparison_name) {
     geom_point(alpha = 0.6) +
     theme_bw() +
     ggtitle(paste0("MA plot: ", comparison_name)) +
-    xlab("Mean expression (log scale)") +
+    xlab("Mean of normalized counts") +
     ylab("Log2 fold change") +
     scale_color_manual(values = c("gray", "red"), name = "Significant") +
-    scale_x_log10() +
     geom_hline(yintercept = c(-1, 1), linetype = "dashed") +
     ggrepel::geom_text_repel(
-      data = subset(res, padj < 0.05 & (abs(log2FoldChange) > 1)),
+      data = subset(res, padj < 0.05 & abs(log2FoldChange) > 1),
       aes(label = rownames(res)),
-      size = 3,
       force = 5
     )
-  
-  ggsave(paste0("ma_", comparison_name, ".png"), width = 10, height = 8)
+  ggsave(paste0("MA_plot_", comparison_name, ".png"), width = 10, height = 8)
 }
 
-lapply(names(results_list), function(name) {
-  ma_plot(results_list[[name]], name)
+lapply(names(contrasts), function(comparison_name) {
+  ma_plot(results_list[[comparison_name]], comparison_name)
 })
+
+# Remove intermediate objects and perform garbage collection
+rm(contrasts, dds)
+gc()
