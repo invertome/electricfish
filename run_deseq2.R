@@ -85,8 +85,16 @@ results_list <- lapply(contrasts, function(contrast) {
 
 names(results_list) <- names(contrasts)
 
-# Combine the results into a single data frame
-all_res <- bind_rows(results_list, .id = "comparison")
+# Combine all the results into a single data frame
+results_list_df <- lapply(results_list, function(res) {
+  res_df <- as.data.frame(res)
+  res_df$gene_id <- rownames(res_df)
+  return(res_df)
+})
+
+combined_results <- dplyr::bind_rows(results_list_df, .id = "comparison")
+write.table(combined_results, file = "combined_DESeq2_results.tsv", sep = "\t", quote = FALSE, row.names = FALSE)
+
 
 # Write the results to a CSV file
 write.csv(all_res, "DESeq2_results.csv")
