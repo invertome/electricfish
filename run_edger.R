@@ -60,7 +60,7 @@ write.csv(all_res, "edgeR_results.csv")
 logcpm <- cpm(y, log = TRUE)
 percentVar <- round(100 * attr(logcpm, "percentVar"))
 
-ggplot(logcpm, aes(PC1, PC2, color = Tissue, shape = Injection, linetype = Feeding)) +
+ggplot(data = logcpm, aes(PC1, PC2, color = Tissue, shape = Injection, linetype = Feeding)) +
   geom_point(size = 3) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
@@ -73,7 +73,6 @@ ggplot(logcpm, aes(PC1, PC2, color = Tissue, shape = Injection, linetype = Feedi
   geom_text_repel(aes(label = rownames(logcpm)), force = 5)
 ggsave("PCA_plot.png", width = 10, height = 8)
 
-
 # Heatmap visualization
 # Find top 50 differentially expressed genes across all contrasts
 top_genes <- unique(unlist(lapply(results_list, function(x) rownames(head(x$table, 50)))))
@@ -84,7 +83,7 @@ heatmap_data <- log2(top_genes_counts + 1)
 colnames(heatmap_data) <- paste(sample_metadata$Tissue, sample_metadata$Injection, sample_metadata$Feeding, sep = "_")
 heatmap_colors <- colorRampPalette(c("navy", "white", "firebrick3"))(100)
 
-heatmap3(heatmap_data, ColSideColors = as.matrix(sample_metadata[, c("Tissue", "Injection", "Feeding")]), col = heatmap_colors, scale = "row", margins = c(5,10), cexRow = 0.8, cexCol = 1.0, labCol = colnames(heatmap_data), hclustfun = function(x) hclust(x, method = "ward.D2"))
-
 # Save the heatmap as a PNG file
-ggsave("heatmap.png", width = 1000, height = 1000, dpi = 150)
+png("heatmap.png", width = 1000, height = 1000, res = 150)
+heatmap3(heatmap_data, ColSideColors = as.matrix(sample_metadata[, c("Tissue", "Injection", "Feeding")]), col = heatmap_colors, scale = "row", margins = c(5,10), cexRow = 0.8, cexCol = 1.0, labCol = colnames(heatmap_data), hclustfun = function(x) hclust(x, method = "ward.D2"))
+dev.off()
