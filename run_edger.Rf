@@ -51,11 +51,15 @@ for (cname in colnames(contr.matrix)) {
   contrast <- contr.matrix[, cname]
   qlf_contrast <- glmQLFTest(fit, contrast = contrast)
   res <- topTags(qlf_contrast, n = Inf, adjust.method = "BH")
-  results_list[[cname]] <- res
+  results_list[[cname]] <- res$table # Extract the data frame from the TopTags object
 }
 
 # Combine the results into a single data frame
-all_res <- bind_rows(results_list, .id = "comparison")
+all_res <- bind_rows(lapply(names(results_list), function(x) {
+  df <- results_list[[x]]
+  df$comparison <- x
+  df
+}), .id = "comparison")
 
 # Write the results to a CSV file
 write.csv(all_res, "edgeR_results.csv")
@@ -64,18 +68,17 @@ write.csv(all_res, "edgeR_results.csv")
 logcpm <- cpm(y, log = TRUE)
 percentVar <- round(100 * attr(logcpm, "percentVar"))
 
-ggplot(data = logcpm, aes(PC1, PC2, color = Tissue, shape = Injection, linetype = Feeding)) +
+logcpm_long <- as.data.frame(logcpm)
+logcpm_long$Sample <- rownames(logcpm_long)
+
+ggplot(logcpm_long, aes(x = PC1, y = PC2, color = sample_groups)) +
   geom_point(size = 3) +
-  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
-  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  geom_text_repel(aes(label = Sample), show.legend = FALSE) +
+  xlab(paste0("PC1 (", percentVar[1], "% variance)")) +
+  ylab(paste0("PC2 (", percentVar[2], "% variance)")) +
   theme_bw() +
-  ggtitle("PCA plot") +
-  scale_color_manual(name = "Tissue", values = c("EO" = "blue", "SM" = "red")) +
-  scale_shape_manual(name = "Injection", values = c("leptin" = 19, "saline" = 17)) +
-  scale_linetype_discrete(name = "Feeding") +
-  guides(shape = guide_legend(title = "Injection"), linetype = guide_legend(title = "Feeding")) +
-  geom_text_repel(aes(label = rownames(logcpm)), force = 5)
-ggsave("PCA_plot.png", width = 10, height = 8)
+  ggtitle("PCA plot of the samples") +
+  theme(plot.title = element_text(hjust = 0.5))
 
 # Heatmap visualization
 # Find top 50 differentially expressed genes across all contrasts
@@ -87,7 +90,16 @@ heatmap_data <- log2(top_genes_counts + 1)
 colnames(heatmap_data) <- paste(sample_metadata$Tissue, sample_metadata$Injection, sample_metadata$Feeding, sep = "_")
 heatmap_colors <- colorRampPalette(c("navy", "white", "firebrick3"))(100)
 
-# Save the heatmap as a PNG file
-png("heatmap.png", width = 1000, height = 1000, res = 150)
-heatmap3(heatmap_data, ColSideColors = as.matrix(sample_metadata[, c("Tissue", "Injection", "Feeding")]), col = heatmap_colors, scale = "row", margins = c(5,10), cexRow = 0.8, cexCol = 1.0, labCol = colnames(heatmap_data), hclustfun = function(x) hclust(x, method = "ward.D2"))
-dev.off()
+# Convert heatmap_data to a numeric matrix and ensure all elements are numeric
+heatmap_data_mat <- as.matrix(heatmap_data)
+heatmap_data_mat <- matrix(as.numeric(heatmap_data_mat), nrow = nrow(heatmap_data_mat))
+
+# Check if heatmap_data_mat has at least 2 rows and 2 columns
+if (nrow(heatmap_data_mat) >= 2 && ncol(heatmap_data_mat) >= 2) {
+  # Save the heatmap as a PNG file
+  png("heatmap.png", width = 1000, height = 1000, res = 150)
+  heatmap3(heatmap_data_mat, ColSideColors = as.matrix(sample_metadata[, c("Tissue", "Injection", "Feeding")]), col = heatmap_colors, scale = "row", margins = c(5,10), cexRow = 0.8, cexCol = 1.0, labCol = colnames(heatmap_data), hclustfun = function(x) hclust(x, method = "ward.D2"))
+  dev.off()
+} else {
+  cat("Insufficient number of unique genes for heatmap. Please adjust the number of top genes.")
+}
