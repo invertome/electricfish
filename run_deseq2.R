@@ -9,11 +9,18 @@ library(tximport)
 # Read the sample metadata file
 sample_metadata <- read.csv("Sample_Metadata.csv")
 
+# Check if the sample metadata is read correctly
+print(sample_metadata)
+
 # Define the path to the Salmon output files for each sample
-salmon_files <- file.path("salmon_output", sample_metadata$SampleName, "quant.sf")
+salmon_files <- file.path("salmon_output", sample_metadata$SampleID, "quant.sf")
+
+# Check if the salmon_files variable is populated correctly
+print(salmon_files)
 
 # Import the transcript-level data using tximport
 txi <- tximport(salmon_files, type = "salmon", txOut = TRUE, tx2gene = tx2gene)
+
 
 # Convert the summarized data to a DESeqDataSet object
 dds <- DESeqDataSetFromTximport(txi, colData = sample_metadata, design = ~ Tissue + Injection + Feeding + Tissue:Injection:Feeding)
