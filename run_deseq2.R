@@ -1,6 +1,6 @@
 # Load required libraries
 library(DESeq2)
-library(tidyverse)
+library(readr)
 library(ggplot2)
 library(ggrepel)
 library(pheatmap)
@@ -111,9 +111,9 @@ pheatmap(assay(rld[, select_conditions]), annotation_col = annotation, show_coln
 
 # Generate a volcano plot for each comparison
 volcano_plot <- function(res, comparison_name) {
-  res <- as.data.frame(res)
+  res <- as.data.frame(res, stringsAsFactors = FALSE)
   
-  ggplot(res, aes(x = log2FoldChange, y = -log10(pvalue), color = padj < 0.05)) +
+  p <- ggplot(res, aes(x = log2FoldChange, y = -log10(pvalue), color = padj < 0.05)) +
     geom_point(alpha = 0.6) +
     theme_bw() +
     ggtitle(paste0("Volcano plot: ", comparison_name)) +
@@ -127,8 +127,9 @@ volcano_plot <- function(res, comparison_name) {
       aes(label = rownames(res)),
       force = 5
     )
-  ggsave(paste0("Volcano_plot_", comparison_name, ".png"), width = 10, height = 8)
+  ggsave(paste0("Volcano_plot_", comparison_name, ".png"), plot = p, width = 10, height = 8)
 }
+
 
 lapply(names(results_list), function(comparison_name) {
   volcano_plot(results_list[[comparison_name]], comparison_name)
@@ -140,9 +141,9 @@ gc()
 
 # Generate an MA plot for each comparison
 ma_plot <- function(res, comparison_name) {
-  res <- as.data.frame(res)
+  res <- as.data.frame(res, stringsAsFactors = FALSE)
   
-  ggplot(res, aes(x = baseMean, y = log2FoldChange, color = padj < 0.05)) +
+  p <- ggplot(res, aes(x = baseMean, y = log2FoldChange, color = padj < 0.05)) +
     geom_point(alpha = 0.6) +
     theme_bw() +
     ggtitle(paste0("MA plot: ", comparison_name)) +
@@ -155,8 +156,9 @@ ma_plot <- function(res, comparison_name) {
       aes(label = rownames(res)),
       force = 5
     )
-  ggsave(paste0("MA_plot_", comparison_name, ".png"), width = 10, height = 8)
+  ggsave(paste0("MA_plot_", comparison_name, ".png"), plot = p, width = 10, height = 8)
 }
+
 
 lapply(names(contrasts), function(comparison_name) {
   ma_plot(results_list[[comparison_name]], comparison_name)
