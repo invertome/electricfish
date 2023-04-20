@@ -78,8 +78,15 @@ results_list <- lapply(contrasts, function(contrast) {
 
 names(results_list) <- names(contrasts)
 
+# Convert DESeqResults objects to data frames and add a comparison column
+results_df_list <- lapply(names(results_list), function(name) {
+  res_df <- as.data.frame(results_list[[name]])
+  res_df$comparison <- name
+  return(res_df)
+})
+
 # Combine the results into a single data frame
-all_res <- bind_rows(results_list, .id = "comparison")
+all_res <- bind_rows(results_df_list)
 
 # Write the results to a CSV file
 write.csv(all_res, "DESeq2_results.csv")
