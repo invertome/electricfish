@@ -69,54 +69,117 @@ pca_plot <- ggplot(pcaData, aes(PC1, PC2, color = Tissue, shape = Injection)) +
 print(pca_plot)
 ggsave("deseq2_output/pca_plot.png", plot = pca_plot)
 
+
 # Histograms
 hist_EO_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x=res_EO_leptin_fooddep_vs_saline_fooddep$pvalue), aes(x)) +
   geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  geom_vline(xintercept = c(0.05, 0.01, 0.001, 0.0001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (EO Leptin Fooddep vs Saline Fooddep)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_EO_leptin_fooddep_vs_saline_fooddep.png", plot = hist_EO_leptin_fooddep_vs_saline_fooddep)
 
 hist_EO_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x=res_EO_leptin_adlib_vs_saline_adlib$pvalue), aes(x)) +
   geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  geom_vline(xintercept = c(0.05, 0.01, 0.001, 0.0001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (EO Leptin Adlib vs Saline Adlib)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_EO_leptin_adlib_vs_saline_adlib.png", plot = hist_EO_leptin_adlib_vs_saline_adlib)
 
 hist_SM_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x=res_SM_leptin_fooddep_vs_saline_fooddep$pvalue), aes(x)) +
   geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  geom_vline(xintercept = c(0.05, 0.01, 0.001, 0.0001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (SM Leptin Fooddep vs Saline Fooddep)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_SM_leptin_fooddep_vs_saline_fooddep.png", plot = hist_SM_leptin_fooddep_vs_saline_fooddep)
 
 hist_SM_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x=res_SM_leptin_adlib_vs_saline_adlib$pvalue), aes(x)) +
   geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  geom_vline(xintercept = c(0.05, 0.01, 0.001, 0.0001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (SM Leptin Adlib vs Saline Adlib)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_SM_leptin_adlib_vs_saline_adlib.png", plot = hist_SM_leptin_adlib_vs_saline_adlib)
 
 
-
 # Volcano plots
-vol_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin_fooddep_vs_saline_fooddep, title = "Volcano plot (EO Leptin Fooddep vs Saline Fooddep)", pCutoff = 0.05, FCcutoff = 1)
-ggsave("deseq2_output/volcano_EO_leptin_fooddep_vs_saline_fooddep.png", plot = vol_EO_leptin_fooddep_vs_saline_fooddep)
 
-vol_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adlib_vs_saline_adlib, title = "Volcano plot (EO Leptin Adlib vs Saline Adlib)", pCutoff = 0.05, FCcutoff = 1)
-ggsave("deseq2_output/volcano_EO_leptin_adlib_vs_saline_adlib.png", plot = vol_EO_leptin_adlib_vs_saline_adlib)
+# EO Leptin Fooddep vs Saline Fooddep
+volcano_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin_fooddep_vs_saline_fooddep,
+  lab = rownames(res_EO_leptin_fooddep_vs_saline_fooddep),
+  x = 'log2FoldChange',
+  y = 'pvalue',
+  title = 'EO Leptin Fooddep vs Saline Fooddep',
+  pCutoff = 0.05,
+  FCcutoff = 1)
+ggsave("deseq2_output/volcano_EO_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_EO_leptin_fooddep_vs_saline_fooddep)
 
-vol_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin_fooddep_vs_saline_fooddep, title = "Volcano plot (SM Leptin Fooddep vs Saline Fooddep)", pCutoff = 0.05, FCcutoff = 1)
-ggsave("deseq2_output/volcano_SM_leptin_fooddep_vs_saline_fooddep.png", plot = vol_SM_leptin_fooddep_vs_saline_fooddep)
+# EO Leptin Adlib vs Saline Adlib
+volcano_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adlib_vs_saline_adlib,
+  lab = rownames(res_EO_leptin_adlib_vs_saline_adlib),
+  x = 'log2FoldChange',
+  y = 'pvalue',
+  title = 'EO Leptin Adlib vs Saline Adlib',
+  pCutoff = 0.05,
+  FCcutoff = 1)
+ggsave("deseq2_output/volcano_EO_leptin_adlib_vs_saline_adlib.png", plot = volcano_EO_leptin_adlib_vs_saline_adlib)
 
-vol_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_vs_saline_adlib, title = "Volcano plot (SM Leptin Adlib vs Saline Adlib)", pCutoff = 0.05, FCcutoff = 1)
-ggsave("deseq2_output/volcano_SM_leptin_adlib_vs_saline_adlib.png", plot = vol_SM_leptin_adlib_vs_saline_adlib)
+# SM Leptin Fooddep vs Saline Fooddep
+volcano_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin_fooddep_vs_saline_fooddep,
+  lab = rownames(res_SM_leptin_fooddep_vs_saline_fooddep),
+  x = 'log2FoldChange',
+  y = 'pvalue',
+  title = 'SM Leptin Fooddep vs Saline Fooddep',
+  pCutoff = 0.05,
+  FCcutoff = 1)
+ggsave("deseq2_output/volcano_SM_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_SM_leptin_fooddep_vs_saline_fooddep)
+
+# SM Leptin Adlib vs Saline Adlib
+volcano_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_vs_saline_adlib,
+  lab = rownames(res_SM_leptin_adlib_vs_saline_adlib),
+  x = 'log2FoldChange',
+  y = 'pvalue',
+  title = 'SM Leptin Adlib vs Saline Adlib',
+  pCutoff = 0.05,
+  FCcutoff = 1)
+ggsave("deseq2_output/volcano_SM_leptin_adlib_vs_saline_adlib.png", plot = volcano_SM_leptin_adlib_vs_saline_adlib)
 
 # MA plots
-ma_EO_leptin_fooddep_vs_saline_fooddep <- plotMA(res_EO_leptin_fooddep_vs_saline_fooddep, main = "MA plot (EO Leptin Fooddep vs Saline Fooddep)")
+
+# EO Leptin Fooddep vs Saline Fooddep
+ma_EO_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x = res_EO_leptin_fooddep_vs_saline_fooddep$log2FoldChange, y = log10(res_EO_leptin_fooddep_vs_saline_fooddep$baseMean)),
+  aes(x = x, y = y)) +
+  geom_point(alpha = 0.5) +
+  xlab("log2 Fold Change") +
+  ylab("log10 Mean Expression") +
+  ggtitle("MA Plot: EO Leptin Fooddep vs Saline Fooddep") +
+  theme_minimal()
 ggsave("deseq2_output/ma_EO_leptin_fooddep_vs_saline_fooddep.png", plot = ma_EO_leptin_fooddep_vs_saline_fooddep)
 
-ma_EO_leptin_adlib_vs_saline_adlib <- plotMA(res_EO_leptin_adlib_vs_saline_adlib, main = "MA plot (EO Leptin Adlib vs Saline Adlib)")
+# EO Leptin Adlib vs Saline Adlib
+ma_EO_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x = res_EO_leptin_adlib_vs_saline_adlib$log2FoldChange, y = log10(res_EO_leptin_adlib_vs_saline_adlib$baseMean)),
+  aes(x = x, y = y)) +
+  geom_point(alpha = 0.5) +
+  xlab("log2 Fold Change") +
+  ylab("log10 Mean Expression") +
+  ggtitle("MA Plot: EO Leptin Adlib vs Saline Adlib") +
+  theme_minimal()
 ggsave("deseq2_output/ma_EO_leptin_adlib_vs_saline_adlib.png", plot = ma_EO_leptin_adlib_vs_saline_adlib)
 
-ma_SM_leptin_fooddep_vs_saline_fooddep <- plotMA(res_SM_leptin_fooddep_vs_saline_fooddep, main = "MA plot (SM Leptin Fooddep vs Saline Fooddep)")
+# SM Leptin Fooddep vs Saline Fooddep
+ma_SM_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x = res_SM_leptin_fooddep_vs_saline_fooddep$log2FoldChange, y = log10(res_SM_leptin_fooddep_vs_saline_fooddep$baseMean)),
+  aes(x = x, y = y)) +
+  geom_point(alpha = 0.5) +
+  xlab("log2 Fold Change") +
+  ylab("log10 Mean Expression") +
+  ggtitle("MA Plot: SM Leptin Fooddep vs Saline Fooddep") +
+  theme_minimal()
 ggsave("deseq2_output/ma_SM_leptin_fooddep_vs_saline_fooddep.png", plot = ma_SM_leptin_fooddep_vs_saline_fooddep)
 
-ma_SM_leptin_adlib_vs_saline_adlib <- plotMA(res_SM_leptin_adlib_vs_saline_adlib, main = "MA plot (SM Leptin Adlib vs Saline Adlib)")
+# SM Leptin Adlib vs Saline Adlib
+ma_SM_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x = res_SM_leptin_adlib_vs_saline_adlib$log2FoldChange, y = log10(res_SM_leptin_adlib_vs_saline_adlib$baseMean)),
+  aes(x = x, y = y)) +
+  geom_point(alpha = 0.5) +
+  xlab("log2 Fold Change") +
+  ylab("log10 Mean Expression") +
+  ggtitle("MA Plot: SM Leptin Adlib vs Saline Adlib") +
+  theme_minimal()
 ggsave("deseq2_output/ma_SM_leptin_adlib_vs_saline_adlib.png", plot = ma_SM_leptin_adlib_vs_saline_adlib)
+
 
 # Heatmaps
 log2FoldChange = lfcShrink(dds, coef = "Injection_leptin_vs_saline")
