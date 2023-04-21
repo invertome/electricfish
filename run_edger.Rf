@@ -3,12 +3,24 @@ library(edgeR)
 library(limma)
 library(ggplot2)
 library(ggrepel)
-library(heatmap3)
+library(pheatmap)
 library(dplyr)
+library(tximport)
 
-# Read the count matrix and sample metadata files
-count_matrix <- read.csv("Count_Matrix.csv", row.names = 1)
+# Read the sample metadata file
 sample_metadata <- read.csv("Sample_Metadata.csv")
+
+# Set the path to the salmon output directory
+salmon_output_dir <- "salmon_output"
+
+# Import Salmon quant data into R
+quant_files <- file.path(salmon_output_dir, sample_metadata$SampleID, "quant.sf")
+txi <- tximport(quant_files, type = "salmon", txOut = FALSE)
+
+# Create a count matrix
+count_matrix <- txi$counts
+rownames(count_matrix) <- rownames(txi$length)
+colnames(count_matrix) <- sample_metadata$SampleID
 
 # Create DGEList object
 sample_groups <- factor(paste(sample_metadata$Tissue, sample_metadata$Injection, sample_metadata$Feeding, sep="_"))
@@ -54,9 +66,14 @@ for (cname in colnames(contr.matrix)) {
   results_list[[cname]] <- res$table # Extract the data frame from the TopTags object
 }
 
+# Filter the results for log2FC >= 1 and p-value < 0.05
+filtered_results_list <- lapply(results_list, function(x) {
+  x <- x[abs(x$logFC) >= 1 & x$PValue < 0.05, ]
+})
+
 # Combine the results into a single data frame
-all_res <- bind_rows(lapply(names(results_list), function(x) {
-  df <- results_list[[x]]
+all_res <- bind_rows(lapply(names(filtered_results_list), function(x) {
+  df <- filtered_results_list[[x]]
   df$comparison <- x
   df
 }), .id = "comparison")
@@ -64,14 +81,36 @@ all_res <- bind_rows(lapply(names(results_list), function(x) {
 # Write the results to a CSV file
 write.csv(all_res, "edgeR_results.csv")
 
+# Histograms of log2FC and p-values
+ggplot(all_res, aes(x = logFC)) +
+  geom_histogram(binwidth = 0.1, color = "black", fill = "dodgerblue") +
+  xlab("log2 Fold Change") +
+  ylab("Frequency") +
+  theme_bw() +
+  ggtitle("Histogram of log2 Fold Change")
+
+ggplot(all_res, aes(x = PValue)) +
+  geom_histogram(binwidth = 0.01, color = "black", fill = "dodgerblue") +
+  xlab("P-Value") +
+  ylab("Frequency") +
+  theme_bw() +
+  ggtitle("Histogram of P-Values")
+
 # PCA plot
 logcpm <- cpm(y, log = TRUE)
 percentVar <- round(100 * attr(logcpm, "percentVar"))
 
+pca_res <- prcomp(t(logcpm), scale = TRUE)
+pca_df <- data.frame(Sample = rownames(pca_res$x), PC1 = pca_res$x[, 1], PC2 = pca_res$x[, 2])
+
 logcpm_long <- as.data.frame(logcpm)
 logcpm_long$Sample <- rownames(logcpm_long)
+logcpm_long <- merge(logcpm_long, pca_df, by = "Sample")
 
-ggplot(logcpm_long, aes(x = PC1, y = PC2, color = sample_groups)) +
+sample_groups_df <- data.frame(Sample = rownames(pca_res$x), Group = sample_groups)
+logcpm_long <- merge(logcpm_long, sample_groups_df, by = "Sample")
+
+ggplot(logcpm_long, aes(x = PC1, y = PC2, color = Group)) +
   geom_point(size = 3) +
   geom_text_repel(aes(label = Sample), show.legend = FALSE) +
   xlab(paste0("PC1 (", percentVar[1], "% variance)")) +
@@ -81,14 +120,27 @@ ggplot(logcpm_long, aes(x = PC1, y = PC2, color = sample_groups)) +
   theme(plot.title = element_text(hjust = 0.5))
 
 # Heatmap visualization
-# Find top 50 differentially expressed genes across all contrasts
-top_genes <- unique(unlist(lapply(results_list, function(x) rownames(head(x$table, 50)))))
+# Find top 200 differentially expressed genes across all contrasts
+# Find top 50 differentially expressed genes across all contrasts based on adjusted p-value
+top_genes <- unique(unlist(lapply(results_list, function(x) rownames(x[order(x$FDR), ][1:200, ]))))
 top_genes_counts <- count_matrix[top_genes,]
 
 # Create a heatmap
 heatmap_data <- log2(top_genes_counts + 1)
 colnames(heatmap_data) <- paste(sample_metadata$Tissue, sample_metadata$Injection, sample_metadata$Feeding, sep = "_")
 heatmap_colors <- colorRampPalette(c("navy", "white", "firebrick3"))(100)
+
+# Create an annotation matrix for the columns
+annotation_col <- as.data.frame(sample_metadata[, c("Tissue", "Injection", "Feeding")])
+rownames(annotation_col) <- paste(colnames(heatmap_data), 1:nrow(annotation_col), sep = "_")
+colnames(annotation_col) <- c("Tissue", "Injection", "Feeding")
+
+# Create colors for the annotations
+annotation_colors <- list(
+  Tissue = c("EO" = "darkorange", "SM" = "dodgerblue"),
+  Injection = c("leptin" = "limegreen", "saline" = "tomato"),
+  Feeding = c("adlib" = "gold", "fooddep" = "mediumorchid")
+)
 
 # Convert heatmap_data to a numeric matrix and ensure all elements are numeric
 heatmap_data_mat <- as.matrix(heatmap_data)
@@ -98,7 +150,7 @@ heatmap_data_mat <- matrix(as.numeric(heatmap_data_mat), nrow = nrow(heatmap_dat
 if (nrow(heatmap_data_mat) >= 2 && ncol(heatmap_data_mat) >= 2) {
   # Save the heatmap as a PNG file
   png("heatmap.png", width = 1000, height = 1000, res = 150)
-  heatmap3(heatmap_data_mat, ColSideColors = as.matrix(sample_metadata[, c("Tissue", "Injection", "Feeding")]), col = heatmap_colors, scale = "row", margins = c(5,10), cexRow = 0.8, cexCol = 1.0, labCol = colnames(heatmap_data), hclustfun = function(x) hclust(x, method = "ward.D2"))
+  pheatmap(heatmap_data_mat, annotation_col = annotation_col, annotation_colors = annotation_colors, color = heatmap_colors, scale = "row", clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean", clustering_method = "ward.D2")
   dev.off()
 } else {
   cat("Insufficient number of unique genes for heatmap. Please adjust the number of top genes.")
