@@ -246,6 +246,16 @@ log_norm_counts <- log2(norm_counts + 1)
 top_var_genes <- head(order(rowVars(log_norm_counts), decreasing = TRUE), 100)
 mat_top_var_genes <- log_norm_counts[top_var_genes, ]
 
+# Identify rows with missing or infinite values
+problematic_rows <- apply(log_norm_counts, 1, function(x) any(is.na(x) | is.infinite(x)))
+
+# Remove problematic rows from the data
+filtered_log_norm_counts <- log_norm_counts[!problematic_rows, ]
+
+# Update top variable genes matrix
+top_var_genes <- head(order(rowVars(filtered_log_norm_counts), decreasing = TRUE), 100)
+mat_top_var_genes <- filtered_log_norm_counts[top_var_genes, ]
+
 # Heatmap for EO Leptin Fooddep vs Saline Fooddep
 EO_leptin_fooddep_vs_saline_fooddep <- mat_top_var_genes[, colData(dds)$group %in% c("EO_leptin_fooddep", "EO_saline_fooddep")]
 pheatmap(EO_leptin_fooddep_vs_saline_fooddep, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
@@ -264,7 +274,6 @@ pheatmap(SM_leptin_adlib_vs_saline_adlib, cluster_rows = TRUE, cluster_cols = TR
 
 # General heatmap with hierarchical clustering of all the samples together
 pheatmap(mat_top_var_genes, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
-
 
 # Print summary
 cat("Generated files for DESeq2 analysis:\n")
