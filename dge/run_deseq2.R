@@ -1,7 +1,7 @@
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
-BiocManager::install(c("DESeq2", "tximport", "ggplot2", "pheatmap", "EnhancedVolcano"))
+BiocManager::install(c("DESeq2", "tximport", "ggplot2", "pheatmap", "EnhancedVolcano", "limma"))
 
 
 # Load packages
@@ -10,6 +10,7 @@ library(tximport)
 library(ggplot2)
 library(pheatmap)
 library(EnhancedVolcano)
+library(limma)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -19,15 +20,24 @@ samples <- metadata$SampleID
 files <- file.path("salmon_output", samples, "quant.sf")
 txi <- tximport(files, type = "salmon", txOut = TRUE)
 
+
 # Create DESeq2 object
-dds <- DESeqDataSetFromTximport(txi, metadata, ~Tissue + Injection + Feeding)
+dds <- DESeqDataSetFromTximport(txi, metadata, ~Tissue + Injection + Feeding + Tissue:Injection + Tissue:Feeding + Injection:Feeding + Tissue:Injection:Feeding)
 dds <- DESeq(dds)
 
-# Results
-res_EO_leptin_fooddep_vs_saline_fooddep <- results(dds, contrast = list("Injection_leptin_vs_saline", "Feeding_fooddep"), listValues = c(1,-1), test = "LRT")
-res_EO_leptin_adlib_vs_saline_adlib <- results(dds, contrast = list("Injection_leptin_vs_saline", "Feeding_adlib"), listValues = c(1,-1), test = "LRT")
-res_SM_leptin_fooddep_vs_saline_fooddep <- results(dds, contrast = list("Injection_leptin_vs_saline", "Feeding_fooddep"), listValues = c(-1,1), test = "LRT")
-res_SM_leptin_adlib_vs_saline_adlib <- results(dds, contrast = list("Injection_leptin_vs_saline", "Feeding_adlib"), listValues = c(-1,1), test = "LRT")
+# Define contrasts
+contrasts <- list(
+  EO_leptin_fooddep_vs_saline_fooddep = c(0, 0, 1, -1, 0, 0, 1, -1),
+  EO_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 0, 0),
+  SM_leptin_fooddep_vs_saline_fooddep = c(0, 0, 1, -1, 0, 0, 1, 0),
+  SM_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 0, 1)
+)
+
+# Apply contrasts and obtain results
+res_EO_leptin_fooddep_vs_saline_fooddep <- results(dds, contrast = contrasts[["EO_leptin_fooddep_vs_saline_fooddep"]])
+res_EO_leptin_adlib_vs_saline_adlib <- results(dds, contrast = contrasts[["EO_leptin_adlib_vs_saline_adlib"]])
+res_SM_leptin_fooddep_vs_saline_fooddep <- results(dds, contrast = contrasts[["SM_leptin_fooddep_vs_saline_fooddep"]])
+res_SM_leptin_adlib_vs_saline_adlib <- results(dds, contrast = contrasts[["SM_leptin_adlib_vs_saline_adlib"]])
 
 # Save results
 dir.create("deseq2_output")
@@ -48,18 +58,39 @@ write.csv(summary_SM_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/sum
 write.csv(summary_SM_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary_SM_leptin_adlib_vs_saline_adlib.csv")
 
 # PCA plot
-plotPCA(dds)
-ggsave("deseq2_output/pca_plot.png")
+vsd <- vst(dds, blind = FALSE)
+pcaData <- plotPCA(vsd, intgroup = c("Tissue", "Injection", "Feeding"), returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+pca_plot <- ggplot(pcaData, aes(PC1, PC2, color = Tissue, shape = Injection)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  coord_fixed()
+print(pca_plot)
+ggsave("deseq2_output/pca_plot.png", plot = pca_plot)
 
 # Histograms
-hist(res_EO_leptin_fooddep_vs_saline_fooddep$pvalue, breaks = 50, col = "skyblue", border = "slateblue", main = "Histogram of p-values (EO Leptin Fooddep vs Saline Fooddep)")
-ggsave("deseq2_output/histogram_EO_leptin_fooddep_vs_saline_fooddep.png")
-hist(res_EO_leptin_adlib_vs_saline_adlib$pvalue, breaks = 50, col = "skyblue", border = "slateblue", main = "Histogram of p-values (EO Leptin Adlib vs Saline Adlib)")
-ggsave("deseq2_output/histogram_EO_leptin_adlib_vs_saline_adlib.png")
-hist(res_SM_leptin_fooddep_vs_saline_fooddep$pvalue, breaks = 50, col = "skyblue", border = "slateblue", main = "Histogram of p-values (SM Leptin Fooddep vs Saline Fooddep)")
-ggsave("deseq2_output/histogram_SM_leptin_fooddep_vs_saline_fooddep.png")
-hist(res_SM_leptin_adlib_vs_saline_adlib$pvalue, breaks = 50, col = "skyblue", border = "slateblue", main = "Histogram of p-values (SM Leptin Adlib vs Saline Adlib)")
-ggsave("deseq2_output/histogram_SM_leptin_adlib_vs_saline_adlib.png")
+hist_EO_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x=res_EO_leptin_fooddep_vs_saline_fooddep$pvalue), aes(x)) +
+  geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  labs(title = "Histogram of p-values (EO Leptin Fooddep vs Saline Fooddep)", x = "p-value", y = "Count")
+ggsave("deseq2_output/histogram_EO_leptin_fooddep_vs_saline_fooddep.png", plot = hist_EO_leptin_fooddep_vs_saline_fooddep)
+
+hist_EO_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x=res_EO_leptin_adlib_vs_saline_adlib$pvalue), aes(x)) +
+  geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  labs(title = "Histogram of p-values (EO Leptin Adlib vs Saline Adlib)", x = "p-value", y = "Count")
+ggsave("deseq2_output/histogram_EO_leptin_adlib_vs_saline_adlib.png", plot = hist_EO_leptin_adlib_vs_saline_adlib)
+
+hist_SM_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x=res_SM_leptin_fooddep_vs_saline_fooddep$pvalue), aes(x)) +
+  geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  labs(title = "Histogram of p-values (SM Leptin Fooddep vs Saline Fooddep)", x = "p-value", y = "Count")
+ggsave("deseq2_output/histogram_SM_leptin_fooddep_vs_saline_fooddep.png", plot = hist_SM_leptin_fooddep_vs_saline_fooddep)
+
+hist_SM_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x=res_SM_leptin_adlib_vs_saline_adlib$pvalue), aes(x)) +
+  geom_histogram(breaks = seq(0, 1, by = 0.02), col = "slateblue", fill = "skyblue") +
+  labs(title = "Histogram of p-values (SM Leptin Adlib vs Saline Adlib)", x = "p-value", y = "Count")
+ggsave("deseq2_output/histogram_SM_leptin_adlib_vs_saline_adlib.png", plot = hist_SM_leptin_adlib_vs_saline_adlib)
+
+
 
 # Volcano plots
 vol_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin_fooddep_vs_saline_fooddep, title = "Volcano plot (EO Leptin Fooddep vs Saline Fooddep)", pCutoff = 0.05, FCcutoff = 1)
