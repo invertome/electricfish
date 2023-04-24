@@ -159,8 +159,8 @@ volcano_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin_foo
   x = 'log2FoldChange',
   y = 'pvalue',
   title = 'EO Leptin Fooddep vs Saline Fooddep',
-  pCutoff = 0.05,
-  FCcutoff = 1)
+  pCutoff = pvalue_threshold,
+  FCcutoff = foldchange_threshold)
 ggsave("deseq2_output/volcano_EO_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_EO_leptin_fooddep_vs_saline_fooddep)
 
 # EO Leptin Adlib vs Saline Adlib
@@ -169,8 +169,8 @@ volcano_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adlib_v
   x = 'log2FoldChange',
   y = 'pvalue',
   title = 'EO Leptin Adlib vs Saline Adlib',
-  pCutoff = 0.05,
-  FCcutoff = 1)
+  pCutoff = pvalue_threshold,
+  FCcutoff = foldchange_threshold)
 ggsave("deseq2_output/volcano_EO_leptin_adlib_vs_saline_adlib.png", plot = volcano_EO_leptin_adlib_vs_saline_adlib)
 
 # SM Leptin Fooddep vs Saline Fooddep
@@ -179,8 +179,8 @@ volcano_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin_foo
   x = 'log2FoldChange',
   y = 'pvalue',
   title = 'SM Leptin Fooddep vs Saline Fooddep',
-  pCutoff = 0.05,
-  FCcutoff = 1)
+  pCutoff = pvalue_threshold,
+  FCcutoff = foldchange_threshold)
 ggsave("deseq2_output/volcano_SM_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_SM_leptin_fooddep_vs_saline_fooddep)
 
 # SM Leptin Adlib vs Saline Adlib
@@ -189,8 +189,8 @@ volcano_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_v
   x = 'log2FoldChange',
   y = 'pvalue',
   title = 'SM Leptin Adlib vs Saline Adlib',
-  pCutoff = 0.05,
-  FCcutoff = 1)
+  pCutoff = pvalue_threshold,
+  FCcutoff = foldchange_threshold)
 ggsave("deseq2_output/volcano_SM_leptin_adlib_vs_saline_adlib.png", plot = volcano_SM_leptin_adlib_vs_saline_adlib)
 
 # MA plots
@@ -204,8 +204,8 @@ enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
     ylim = c(0, 12),
-    pCutoff = 1 / (10 ^ 7),
-    FCcutoff = 2.0,
+    pCutoff = pvalue_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 3.5,
     labSize = 4.0,
     boxedLabels = TRUE,
@@ -229,8 +229,8 @@ enhanced_ma_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adl
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
     ylim = c(0, 12),
-    pCutoff = 1 / (10 ^ 7),
-    FCcutoff = 2.0,
+    pCutoff = pvalue_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 3.5,
     labSize = 4.0,
     boxedLabels = TRUE,
@@ -254,8 +254,8 @@ enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
     ylim = c(0, 12),
-    pCutoff = 1 / (10 ^ 7),
-    FCcutoff = 2.0,
+    pCutoff = pvalue_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 3.5,
     labSize = 4.0,
     boxedLabels = TRUE,
@@ -279,8 +279,8 @@ enhanced_ma_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adl
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
     ylim = c(0, 12),
-    pCutoff = 1 / (10 ^ 7),
-    FCcutoff = 2.0,
+    pCutoff = pvalue_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 3.5,
     labSize = 4.0,
     boxedLabels = TRUE,
