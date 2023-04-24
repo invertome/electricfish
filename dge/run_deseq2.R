@@ -33,8 +33,9 @@ library(limma)
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
 
 # Set fold-change and p-value thresholds
-foldchange_threshold <- 2
+foldchange_threshold <- 4
 pvalue_threshold <- 0.000001
+expression_threshold <- 2
 
 # Import Salmon output
 samples <- metadata$SampleID
@@ -61,21 +62,6 @@ contrasts <- list(
   
 )
 
-contrast_names = c("EO_saline_fooddep_vs_EO_leptin_fooddep", "EO_saline_adlib_vs_EO_leptin_adlib", "SM_saline_fooddep_vs_SM_leptin_fooddep", "SM_saline_adlib_vs_SM_leptin_adlib", "EO_leptin_fooddep_vs_EO_leptin_adlib", "SM_leptin_fooddep_vs_SM_leptin_adlib", "EO_saline_fooddep_vs_SM_saline_fooddep", "EO_saline_adlib_vs_SM_saline_adlib", "Interaction_EO_vs_SM_leptin_fooddep", "Interaction_EO_vs_SM_leptin_adlib")
-contrasts_matrix = rbind(EO_saline_fooddep_vs_EO_leptin_fooddep, EO_saline_adlib_vs_EO_leptin_adlib, SM_saline_fooddep_vs_SM_leptin_fooddep, SM_saline_adlib_vs_SM_leptin_adlib, EO_leptin_fooddep_vs_EO_leptin_adlib, SM_leptin_fooddep_vs_SM_leptin_adlib, EO_saline_fooddep_vs_SM_saline_fooddep, EO_saline_adlib_vs_SM_saline_adlib, Interaction_EO_vs_SM_leptin_fooddep, Interaction_EO_vs_SM_leptin_adlib)
-
-# Save the contrast matrix and names to a data frame
-contrasts_summary = data.frame(contrast_names, contrasts_matrix)
-
-# Save the contrast summary to a text file
-write.table(contrasts_summary, file = "contrast_summary.txt", row.names = FALSE, col.names = TRUE, quote = FALSE, sep = "\t")
-
-# Create a verbal summary of the contrasts
-verbal_summary = paste("This analysis includes the following contrasts:\n\n", paste(contrast_names, collapse = "\n"), "\n\nRemember to adjust for multiple comparisons when interpreting the results of these contrasts.", sep = "")
-
-# Save the verbal summary as a comment in the text file
-cat(verbal_summary, file = "contrast_summary.txt", append = TRUE)
-
 
 # Apply contrasts and obtain results
 res_EO_leptin_fooddep_vs_saline_fooddep <- results(dds, contrast = contrasts[["EO_leptin_fooddep_vs_saline_fooddep"]])
@@ -97,7 +83,7 @@ write.csv(res_SM_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/SM_lept
 write.csv(res_SM_leptin_adlib_vs_saline_adlib, file = "deseq2_output/SM_leptin_adlib_vs_saline_adlib.csv")
 
 write.csv(res_EO_leptin_fooddep_vs_EO_leptin_adlib, file = "deseq2_output/EO_leptin_fooddep_vs_EO_leptin_adlib.csv")
-write.csv(res_SM_leptin_fooddep_vs_SM_leptin_adlib, file = "deseq2_output/SM_leptin_fooddep_vs_SM_leptin_adlib")
+write.csv(res_SM_leptin_fooddep_vs_SM_leptin_adlib, file = "deseq2_output/SM_leptin_fooddep_vs_SM_leptin_adlib.csv")
 write.csv(res_EO_saline_fooddep_vs_SM_saline_fooddep, file = "deseq2_output/EO_saline_fooddep_vs_SM_saline_fooddep.csv")
 write.csv(res_EO_saline_adlib_vs_SM_saline_adlib, file = "deseq2_output/EO_saline_adlib_vs_SM_saline_adlib.csv")
 write.csv(res_Interaction_EO_vs_SM_leptin_fooddep, file = "deseq2_output/Interaction_EO_vs_SM_leptin_fooddep.csv")
@@ -125,7 +111,7 @@ write.csv(summary_SM_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary
 write.csv(summary_EO_leptin_fooddep_vs_EO_leptin_adlib, file = "deseq2_output/summary_EO_leptin_fooddep_vs_EO_leptin_adlib.csv")
 write.csv(summary_SM_leptin_fooddep_vs_SM_leptin_adlib, file = "deseq2_output/summary_SM_leptin_fooddep_vs_SM_leptin_adlib.csv")
 write.csv(summary_EO_saline_fooddep_vs_SM_saline_fooddep, file = "deseq2_output/summary_EO_saline_fooddep_vs_SM_saline_fooddep.csv")
-write.csv(summary_EO_saline_adlib_vs_SM_saline_adlib, file = "deseq2_output/summary_EO_saline_adlib_vs_SM_saline_adlib")
+write.csv(summary_EO_saline_adlib_vs_SM_saline_adlib, file = "deseq2_output/summary_EO_saline_adlib_vs_SM_saline_adlib.csv")
 write.csv(summary_Interaction_EO_vs_SM_leptin_fooddep, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_fooddep.csv")
 write.csv(summary_Interaction_EO_vs_SM_leptin_adlib, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_adlib.csv")
 
@@ -176,7 +162,9 @@ volcano_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin_foo
   y = 'pvalue',
   title = 'EO Leptin Fooddep vs Saline Fooddep',
   pCutoff = pvalue_threshold,
-  FCcutoff = foldchange_threshold)
+  FCcutoff = foldchange_threshold,
+  pointSize = 1.8,
+  labSize = 1.8)
 ggsave("deseq2_output/volcano_EO_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_EO_leptin_fooddep_vs_saline_fooddep)
 
 # EO Leptin Adlib vs Saline Adlib
@@ -186,7 +174,9 @@ volcano_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adlib_v
   y = 'pvalue',
   title = 'EO Leptin Adlib vs Saline Adlib',
   pCutoff = pvalue_threshold,
-  FCcutoff = foldchange_threshold)
+  FCcutoff = foldchange_threshold,
+  pointSize = 1.8,
+  labSize = 1.8)
 ggsave("deseq2_output/volcano_EO_leptin_adlib_vs_saline_adlib.png", plot = volcano_EO_leptin_adlib_vs_saline_adlib)
 
 # SM Leptin Fooddep vs Saline Fooddep
@@ -196,7 +186,9 @@ volcano_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin_foo
   y = 'pvalue',
   title = 'SM Leptin Fooddep vs Saline Fooddep',
   pCutoff = pvalue_threshold,
-  FCcutoff = foldchange_threshold)
+  FCcutoff = foldchange_threshold,
+  pointSize = 1.8,
+  labSize = 1.8)
 ggsave("deseq2_output/volcano_SM_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_SM_leptin_fooddep_vs_saline_fooddep)
 
 # SM Leptin Adlib vs Saline Adlib
@@ -206,23 +198,27 @@ volcano_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_v
   y = 'pvalue',
   title = 'SM Leptin Adlib vs Saline Adlib',
   pCutoff = pvalue_threshold,
-  FCcutoff = foldchange_threshold)
+  FCcutoff = foldchange_threshold,
+  pointSize = 1.8,
+  labSize = 1.8)
 ggsave("deseq2_output/volcano_SM_leptin_adlib_vs_saline_adlib.png", plot = volcano_SM_leptin_adlib_vs_saline_adlib)
 
 # MA plots
 
 # EO Leptin Fooddep vs Saline Fooddep
+res_EO_leptin_fooddep_vs_saline_fooddep$baseMeanNew <- 1 / (10^log(res_EO_leptin_fooddep_vs_saline_fooddep$baseMean + 1))
 enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin_fooddep_vs_saline_fooddep,
     lab = rownames(res_EO_leptin_fooddep_vs_saline_fooddep),
     title = 'MA plot: EO Leptin Fooddep vs Saline Fooddep',
     x = 'log2FoldChange',
-    y = 'baseMean',
+    y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    ylim = c(0, 12),
+    xlim = c(-25, 25),
+    ylim = c(0, 2.5),
     pCutoff = pvalue_threshold,
-    FCcutoff = foldchange_threshold,
-    pointSize = 3.5,
+    FCcutoff = expression_threshold,
+    pointSize = 1.8,
     labSize = 4.0,
     boxedLabels = TRUE,
     colAlpha = 1,
@@ -230,24 +226,24 @@ enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
     legendLabSize = 16,
-    legendIconSize = 4.0,
-    drawConnectors = TRUE,
-    widthConnectors = 0.75) + coord_flip()
+    legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep.png", plot = enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep)
 
 # EO Leptin Adlib vs Saline Adlib
+res_EO_leptin_adlib_vs_saline_adlib$baseMeanNew <- 1 / (10^log(res_EO_leptin_adlib_vs_saline_adlib$baseMean + 1))
 enhanced_ma_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adlib_vs_saline_adlib,
     lab = rownames(res_EO_leptin_adlib_vs_saline_adlib),
     title = 'MA plot: EO Leptin Adlib vs Saline Adlib',
     x = 'log2FoldChange',
-    y = 'baseMean',
+    y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    ylim = c(0, 12),
+    xlim = c(-25, 25),
+    ylim = c(0, 2.5),
     pCutoff = pvalue_threshold,
-    FCcutoff = foldchange_threshold,
-    pointSize = 3.5,
+    FCcutoff = expression_threshold,
+    pointSize = 1.8,
     labSize = 4.0,
     boxedLabels = TRUE,
     colAlpha = 1,
@@ -255,24 +251,24 @@ enhanced_ma_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adl
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
     legendLabSize = 16,
-    legendIconSize = 4.0,
-    drawConnectors = TRUE,
-    widthConnectors = 0.75) + coord_flip()
+    legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_EO_leptin_adlib_vs_saline_adlib.png", plot = enhanced_ma_EO_leptin_adlib_vs_saline_adlib)
 
 # SM Leptin Fooddep vs Saline Fooddep
+res_SM_leptin_fooddep_vs_saline_fooddep$baseMeanNew <- 1 / (10^log(res_SM_leptin_fooddep_vs_saline_fooddep$baseMean + 1))
 enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin_fooddep_vs_saline_fooddep,
     lab = rownames(res_SM_leptin_fooddep_vs_saline_fooddep),
     title = 'MA plot: SM Leptin Fooddep vs Saline Fooddep',
     x = 'log2FoldChange',
-    y = 'baseMean',
+    y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    ylim = c(0, 12),
+    xlim = c(-25, 25),
+    ylim = c(0, 2.5),
     pCutoff = pvalue_threshold,
-    FCcutoff = foldchange_threshold,
-    pointSize = 3.5,
+    FCcutoff = expression_threshold,
+    pointSize = 1.8,
     labSize = 4.0,
     boxedLabels = TRUE,
     colAlpha = 1,
@@ -280,24 +276,24 @@ enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
     legendLabSize = 16,
-    legendIconSize = 4.0,
-    drawConnectors = TRUE,
-    widthConnectors = 0.75) + coord_flip()
+    legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep.png", plot = enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep)
 
 # SM Leptin Adlib vs Saline Adlib
+res_SM_leptin_adlib_vs_saline_adlib$baseMeanNew <- 1 / (10^logres_SM_leptin_adlib_vs_saline_adlib$baseMean + 1))
 enhanced_ma_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_vs_saline_adlib,
     lab = rownames(res_SM_leptin_adlib_vs_saline_adlib),
     title = 'MA plot: SM Leptin Adlib vs Saline Adlib',
     x = 'log2FoldChange',
-    y = 'baseMean',
+    y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    ylim = c(0, 12),
+    xlim = c(-25, 25),
+    ylim = c(0, 2.5),
     pCutoff = pvalue_threshold,
-    FCcutoff = foldchange_threshold,
-    pointSize = 3.5,
+    FCcutoff = expression_threshold,
+    pointSize = 1.8,
     labSize = 4.0,
     boxedLabels = TRUE,
     colAlpha = 1,
@@ -305,9 +301,7 @@ enhanced_ma_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adl
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
     legendLabSize = 16,
-    legendIconSize = 4.0,
-    drawConnectors = TRUE,
-    widthConnectors = 0.75) + coord_flip()
+    legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_SM_leptin_adlib_vs_saline_adlib.png", plot = enhanced_ma_SM_leptin_adlib_vs_saline_adlib)
 
