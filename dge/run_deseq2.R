@@ -1,3 +1,20 @@
+# THIS SCRIPT WILL:
+# Install necessary packages (DESeq2, tximport, ggplot2, pheatmap, EnhancedVolcano, and limma).
+# Load packages.
+# Read metadata from the "Sample_Metadata.csv" file.
+# Set fold-change and p-value thresholds.
+# Import Salmon output.
+# Create DESeq2 object.
+# Define contrasts for various comparisons.
+# Apply contrasts and obtain results for each comparison.
+# Save the results and summaries to CSV files in the "deseq2_output" directory.
+# Create and save PCA plot.
+# Create and save histograms for each comparison.
+# Create and save volcano plots for each comparison.
+# Create and save enhanced MA plots for each comparison.
+# Create and save heatmaps.
+
+
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
@@ -15,6 +32,10 @@ library(limma)
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
 
+# Set fold-change and p-value thresholds
+foldchange_threshold <- 2
+pvalue_threshold <- 0.000001
+
 # Import Salmon output
 samples <- metadata$SampleID
 files <- file.path("salmon_output", samples, "quant.sf")
@@ -28,16 +49,29 @@ dds <- DESeq(dds)
 # Define contrasts
 contrasts <- list(
   EO_leptin_fooddep_vs_saline_fooddep = c(0, 0, 1, -1, 0, 0, 1, -1),
-  EO_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 0, 0),
+  EO_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 1, 0), # <-- Updated this line
   SM_leptin_fooddep_vs_saline_fooddep = c(0, 0, 1, -1, 0, 0, 1, 0),
-  SM_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 0, 1)
+  SM_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 0, 1)  # <-- Updated this line
+  EO_leptin_fooddep_vs_EO_leptin_adlib = c(0, 0, 1, -1, 0, 0, 0, 0)
+  SM_leptin_fooddep_vs_SM_leptin_adlib = c(0, 0, 1, 0, 0, 0, 0, -1)
+  EO_saline_fooddep_vs_SM_saline_fooddep = c(0, 0, 0, 0, 1, -1, 0, 0)
+  EO_saline_adlib_vs_SM_saline_adlib = c(0, 0, 0, 0, 1, 0, 0, -1)
+  Interaction_EO_vs_SM_leptin_fooddep = c(0, 0, 1, -1, -1, 1, 0, 0)
+  Interaction_EO_vs_SM_leptin_adlib = c(0, 0, 1, 0, -1, 0, 0, 1)
 )
+
 
 # Apply contrasts and obtain results
 res_EO_leptin_fooddep_vs_saline_fooddep <- results(dds, contrast = contrasts[["EO_leptin_fooddep_vs_saline_fooddep"]])
 res_EO_leptin_adlib_vs_saline_adlib <- results(dds, contrast = contrasts[["EO_leptin_adlib_vs_saline_adlib"]])
 res_SM_leptin_fooddep_vs_saline_fooddep <- results(dds, contrast = contrasts[["SM_leptin_fooddep_vs_saline_fooddep"]])
 res_SM_leptin_adlib_vs_saline_adlib <- results(dds, contrast = contrasts[["SM_leptin_adlib_vs_saline_adlib"]])
+res_EO_leptin_fooddep_vs_EO_leptin_adlib <- results(dds, contrast = contrasts[["EO_leptin_fooddep_vs_EO_leptin_adlib"]])
+res_SM_leptin_fooddep_vs_SM_leptin_adlib <- results(dds, contrast = contrasts[["SM_leptin_fooddep_vs_SM_leptin_adlib"]])
+res_EO_saline_fooddep_vs_SM_saline_fooddep <- results(dds, contrast = contrasts[["EO_saline_fooddep_vs_SM_saline_fooddep"]])
+res_EO_saline_adlib_vs_SM_saline_adlib <- results(dds, contrast = contrasts[["EO_saline_adlib_vs_SM_saline_adlib"]])
+res_Interaction_EO_vs_SM_leptin_fooddep <- results(dds, contrast = contrasts[["Interaction_EO_vs_SM_leptin_fooddep"]])
+res_Interaction_EO_vs_SM_leptin_adlib <- results(dds, contrast = contrasts[["Interaction_EO_vs_SM_leptin_adlib"]])
 
 # Save results
 dir.create("deseq2_output")
@@ -46,16 +80,38 @@ write.csv(res_EO_leptin_adlib_vs_saline_adlib, file = "deseq2_output/EO_leptin_a
 write.csv(res_SM_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/SM_leptin_fooddep_vs_saline_fooddep.csv")
 write.csv(res_SM_leptin_adlib_vs_saline_adlib, file = "deseq2_output/SM_leptin_adlib_vs_saline_adlib.csv")
 
+write.csv(res_EO_leptin_fooddep_vs_EO_leptin_adlib, file = "deseq2_output/EO_leptin_fooddep_vs_EO_leptin_adlib.csv")
+write.csv(res_SM_leptin_fooddep_vs_SM_leptin_adlib, file = "deseq2_output/SM_leptin_fooddep_vs_SM_leptin_adlib")
+write.csv(res_EO_saline_fooddep_vs_SM_saline_fooddep, file = "deseq2_output/EO_saline_fooddep_vs_SM_saline_fooddep.csv")
+write.csv(res_EO_saline_adlib_vs_SM_saline_adlib, file = "deseq2_output/EO_saline_adlib_vs_SM_saline_adlib.csv")
+write.csv(res_Interaction_EO_vs_SM_leptin_fooddep, file = "deseq2_output/Interaction_EO_vs_SM_leptin_fooddep.csv")
+write.csv(res_Interaction_EO_vs_SM_leptin_adlib, file = "deseq2_output/Interaction_EO_vs_SM_leptin_adlib.csv")
+
+
 # Save summaries
 summary_EO_leptin_fooddep_vs_saline_fooddep <- summary(res_EO_leptin_fooddep_vs_saline_fooddep)
 summary_EO_leptin_adlib_vs_saline_adlib <- summary(res_EO_leptin_adlib_vs_saline_adlib)
 summary_SM_leptin_fooddep_vs_saline_fooddep <- summary(res_SM_leptin_fooddep_vs_saline_fooddep)
 summary_SM_leptin_adlib_vs_saline_adlib <- summary(res_SM_leptin_adlib_vs_saline_adlib)
 
+summary_EO_leptin_fooddep_vs_EO_leptin_adlib <- summary(res_EO_leptin_fooddep_vs_EO_leptin_adlib)
+summary_SM_leptin_fooddep_vs_SM_leptin_adlib <- summary(res_SM_leptin_fooddep_vs_SM_leptin_adlib)
+summary_EO_saline_fooddep_vs_SM_saline_fooddep <- summary(res_EO_saline_fooddep_vs_SM_saline_fooddep)
+summary_EO_saline_adlib_vs_SM_saline_adlib <- summary(res_EO_saline_adlib_vs_SM_saline_adlib)
+summary_Interaction_EO_vs_SM_leptin_fooddep <- summary(res_Interaction_EO_vs_SM_leptin_fooddep)
+summary_Interaction_EO_vs_SM_leptin_adlib <- summary(res_Interaction_EO_vs_SM_leptin_adlib)
+
 write.csv(summary_EO_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/summary_EO_leptin_fooddep_vs_saline_fooddep.csv")
 write.csv(summary_EO_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary_EO_leptin_adlib_vs_saline_adlib.csv")
 write.csv(summary_SM_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/summary_SM_leptin_fooddep_vs_saline_fooddep.csv")
 write.csv(summary_SM_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary_SM_leptin_adlib_vs_saline_adlib.csv")
+
+write.csv(summary_EO_leptin_fooddep_vs_EO_leptin_adlib, file = "deseq2_output/summary_EO_leptin_fooddep_vs_EO_leptin_adlib.csv")
+write.csv(summary_SM_leptin_fooddep_vs_SM_leptin_adlib, file = "deseq2_output/summary_SM_leptin_fooddep_vs_SM_leptin_adlib.csv")
+write.csv(summary_EO_saline_fooddep_vs_SM_saline_fooddep, file = "deseq2_output/summary_EO_saline_fooddep_vs_SM_saline_fooddep.csv")
+write.csv(summary_EO_saline_adlib_vs_SM_saline_adlib, file = "deseq2_output/summary_EO_saline_adlib_vs_SM_saline_adlib")
+write.csv(summary_Interaction_EO_vs_SM_leptin_fooddep, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_fooddep.csv")
+write.csv(summary_Interaction_EO_vs_SM_leptin_adlib, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_adlib.csv")
 
 # PCA plot
 vsd <- vst(dds, blind = FALSE)
@@ -243,14 +299,19 @@ ggsave("deseq2_output/enhanced_ma_SM_leptin_adlib_vs_saline_adlib.png", plot = e
 # Heatmaps
 norm_counts <- DESeq2::counts(dds, normalized = TRUE)
 log_norm_counts <- log2(norm_counts + 1)
-top_var_genes <- head(order(rowVars(log_norm_counts), decreasing = TRUE), 100)
-mat_top_var_genes <- log_norm_counts[top_var_genes, ]
 
 # Identify rows with missing or infinite values
 problematic_rows <- apply(log_norm_counts, 1, function(x) any(is.na(x) | is.infinite(x)))
 
 # Remove problematic rows from the data
 filtered_log_norm_counts <- log_norm_counts[!problematic_rows, ]
+
+# Remove rows with near-zero variance
+filtered_log_norm_counts <- filtered_log_norm_counts[apply(filtered_log_norm_counts, 1, var) > 1e-10,]
+
+# Remove columns with all-zero values
+all_zero_columns <- apply(filtered_log_norm_counts, 2, function(x) all(x == 0))
+filtered_log_norm_counts <- filtered_log_norm_counts[, !all_zero_columns]
 
 # Update top variable genes matrix
 top_var_genes <- head(order(rowVars(filtered_log_norm_counts), decreasing = TRUE), 100)
@@ -275,30 +336,5 @@ pheatmap(SM_leptin_adlib_vs_saline_adlib, cluster_rows = TRUE, cluster_cols = TR
 # General heatmap with hierarchical clustering of all the samples together
 pheatmap(mat_top_var_genes, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
 
-# Print summary
-cat("Generated files for DESeq2 analysis:\n")
-cat(paste("deseq2_output/EO_leptin_fooddep_vs_saline_fooddep.csv\n",
-          "deseq2_output/EO_leptin_adlib_vs_saline_adlib.csv\n",
-          "deseq2_output/SM_leptin_fooddep_vs_saline_fooddep.csv\n",
-          "deseq2_output/SM_leptin_adlib_vs_saline_adlib.csv\n",
-          "deseq2_output/summary_EO_leptin_fooddep_vs_saline_fooddep.csv\n",
-          "deseq2_output/summary_EO_leptin_adlib_vs_saline_adlib.csv\n",
-          "deseq2_output/summary_SM_leptin_fooddep_vs_saline_fooddep.csv\n",
-          "deseq2_output/summary_SM_leptin_adlib_vs_saline_adlib.csv\n",
-          "deseq2_output/pca_plot.png\n",
-          "deseq2_output/histogram_EO_leptin_fooddep_vs_saline_fooddep.png\n",
-          "deseq2_output/histogram_EO_leptin_adlib_vs_saline_adlib.png\n",
-          "deseq2_output/histogram_SM_leptin_fooddep_vs_saline_fooddep.png\n",
-          "deseq2_output/histogram_SM_leptin_adlib_vs_saline_adlib.png\n",
-          "deseq2_output/volcano_EO_leptin_fooddep_vs_saline_fooddep.png\n",
-          "deseq2_output/volcano_EO_leptin_adlib_vs_saline_adlib.png\n",
-          "deseq2_output/volcano_SM_leptin_fooddep_vs_saline_fooddep.png\n",
-          "deseq2_output/volcano_SM_leptin_adlib_vs_saline_adlib.png\n",
-          "deseq2_output/ma_EO_leptin_fooddep_vs_saline_fooddep.png\n",
-          "deseq2_output/ma_EO_leptin_adlib_vs_saline_adlib.png\n",
-          "deseq2_output/ma_SM_leptin_fooddep_vs_saline_fooddep.png\n",
-          "deseq2_output/ma_SM_leptin_adlib_vs_saline_adlib.png\n",
-          "deseq2_output/heatmap_top_genes.png\n",
-          sep = ""))
 
 
