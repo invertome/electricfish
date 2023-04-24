@@ -49,16 +49,32 @@ dds <- DESeq(dds)
 # Define contrasts
 contrasts <- list(
   EO_leptin_fooddep_vs_saline_fooddep = c(0, 0, 1, -1, 0, 0, 1, -1),
-  EO_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 1, 0), # <-- Updated this line
+  EO_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 1, 0),
   SM_leptin_fooddep_vs_saline_fooddep = c(0, 0, 1, -1, 0, 0, 1, 0),
-  SM_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 0, 1)  # <-- Updated this line
-  EO_leptin_fooddep_vs_EO_leptin_adlib = c(0, 0, 1, -1, 0, 0, 0, 0)
-  SM_leptin_fooddep_vs_SM_leptin_adlib = c(0, 0, 1, 0, 0, 0, 0, -1)
-  EO_saline_fooddep_vs_SM_saline_fooddep = c(0, 0, 0, 0, 1, -1, 0, 0)
-  EO_saline_adlib_vs_SM_saline_adlib = c(0, 0, 0, 0, 1, 0, 0, -1)
-  Interaction_EO_vs_SM_leptin_fooddep = c(0, 0, 1, -1, -1, 1, 0, 0)
+  SM_leptin_adlib_vs_saline_adlib = c(0, 0, 1, 0, 0, 0, 0, 1),
+  EO_leptin_fooddep_vs_EO_leptin_adlib = c(0, 0, 1, -1, 0, 0, 0, 0),
+  SM_leptin_fooddep_vs_SM_leptin_adlib = c(0, 0, 1, 0, 0, 0, 0, -1),
+  EO_saline_fooddep_vs_SM_saline_fooddep = c(0, 0, 0, 0, 1, -1, 0, 0),
+  EO_saline_adlib_vs_SM_saline_adlib = c(0, 0, 0, 0, 1, 0, 0, -1),
+  Interaction_EO_vs_SM_leptin_fooddep = c(0, 0, 1, -1, -1, 1, 0, 0),
   Interaction_EO_vs_SM_leptin_adlib = c(0, 0, 1, 0, -1, 0, 0, 1)
+  
 )
+
+contrast_names = c("EO_saline_fooddep_vs_EO_leptin_fooddep", "EO_saline_adlib_vs_EO_leptin_adlib", "SM_saline_fooddep_vs_SM_leptin_fooddep", "SM_saline_adlib_vs_SM_leptin_adlib", "EO_leptin_fooddep_vs_EO_leptin_adlib", "SM_leptin_fooddep_vs_SM_leptin_adlib", "EO_saline_fooddep_vs_SM_saline_fooddep", "EO_saline_adlib_vs_SM_saline_adlib", "Interaction_EO_vs_SM_leptin_fooddep", "Interaction_EO_vs_SM_leptin_adlib")
+contrasts_matrix = rbind(EO_saline_fooddep_vs_EO_leptin_fooddep, EO_saline_adlib_vs_EO_leptin_adlib, SM_saline_fooddep_vs_SM_leptin_fooddep, SM_saline_adlib_vs_SM_leptin_adlib, EO_leptin_fooddep_vs_EO_leptin_adlib, SM_leptin_fooddep_vs_SM_leptin_adlib, EO_saline_fooddep_vs_SM_saline_fooddep, EO_saline_adlib_vs_SM_saline_adlib, Interaction_EO_vs_SM_leptin_fooddep, Interaction_EO_vs_SM_leptin_adlib)
+
+# Save the contrast matrix and names to a data frame
+contrasts_summary = data.frame(contrast_names, contrasts_matrix)
+
+# Save the contrast summary to a text file
+write.table(contrasts_summary, file = "contrast_summary.txt", row.names = FALSE, col.names = TRUE, quote = FALSE, sep = "\t")
+
+# Create a verbal summary of the contrasts
+verbal_summary = paste("This analysis includes the following contrasts:\n\n", paste(contrast_names, collapse = "\n"), "\n\nRemember to adjust for multiple comparisons when interpreting the results of these contrasts.", sep = "")
+
+# Save the verbal summary as a comment in the text file
+cat(verbal_summary, file = "contrast_summary.txt", append = TRUE)
 
 
 # Apply contrasts and obtain results
