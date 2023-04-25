@@ -19,7 +19,9 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 BiocManager::install(c("DESeq2", "tximport", "ggplot2", "pheatmap", "EnhancedVolcano", "limma"))
-
+install.packages("scales")
+install.packages("reshape2")
+install.packages("viridis")
 
 # Load packages
 library(DESeq2)
@@ -28,6 +30,8 @@ library(ggplot2)
 library(pheatmap)
 library(EnhancedVolcano)
 library(limma)
+library(scales) # needed for oob parameter
+library(viridis)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -103,17 +107,17 @@ summary_EO_saline_adlib_vs_SM_saline_adlib <- summary(res_EO_saline_adlib_vs_SM_
 summary_Interaction_EO_vs_SM_leptin_fooddep <- summary(res_Interaction_EO_vs_SM_leptin_fooddep)
 summary_Interaction_EO_vs_SM_leptin_adlib <- summary(res_Interaction_EO_vs_SM_leptin_adlib)
 
-write.csv(summary_EO_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/summary_EO_leptin_fooddep_vs_saline_fooddep.csv")
-write.csv(summary_EO_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary_EO_leptin_adlib_vs_saline_adlib.csv")
-write.csv(summary_SM_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/summary_SM_leptin_fooddep_vs_saline_fooddep.csv")
-write.csv(summary_SM_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary_SM_leptin_adlib_vs_saline_adlib.csv")
+write.table(summary_EO_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/summary_EO_leptin_fooddep_vs_saline_fooddep.txt")
+write.table(summary_EO_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary_EO_leptin_adlib_vs_saline_adlib.txt")
+write.table(summary_SM_leptin_fooddep_vs_saline_fooddep, file = "deseq2_output/summary_SM_leptin_fooddep_vs_saline_fooddep.txt")
+write.table(summary_SM_leptin_adlib_vs_saline_adlib, file = "deseq2_output/summary_SM_leptin_adlib_vs_saline_adlib.txt")
 
-write.csv(summary_EO_leptin_fooddep_vs_EO_leptin_adlib, file = "deseq2_output/summary_EO_leptin_fooddep_vs_EO_leptin_adlib.csv")
-write.csv(summary_SM_leptin_fooddep_vs_SM_leptin_adlib, file = "deseq2_output/summary_SM_leptin_fooddep_vs_SM_leptin_adlib.csv")
-write.csv(summary_EO_saline_fooddep_vs_SM_saline_fooddep, file = "deseq2_output/summary_EO_saline_fooddep_vs_SM_saline_fooddep.csv")
-write.csv(summary_EO_saline_adlib_vs_SM_saline_adlib, file = "deseq2_output/summary_EO_saline_adlib_vs_SM_saline_adlib.csv")
-write.csv(summary_Interaction_EO_vs_SM_leptin_fooddep, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_fooddep.csv")
-write.csv(summary_Interaction_EO_vs_SM_leptin_adlib, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_adlib.csv")
+write.table(summary_EO_leptin_fooddep_vs_EO_leptin_adlib, file = "deseq2_output/summary_EO_leptin_fooddep_vs_EO_leptin_adlib.txt")
+write.table(summary_SM_leptin_fooddep_vs_SM_leptin_adlib, file = "deseq2_output/summary_SM_leptin_fooddep_vs_SM_leptin_adlib.txt")
+write.table(summary_EO_saline_fooddep_vs_SM_saline_fooddep, file = "deseq2_output/summary_EO_saline_fooddep_vs_SM_saline_fooddep.txt")
+write.table(summary_EO_saline_adlib_vs_SM_saline_adlib, file = "deseq2_output/summary_EO_saline_adlib_vs_SM_saline_adlib.txt")
+write.table(summary_Interaction_EO_vs_SM_leptin_fooddep, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_fooddep.txt")
+write.table(summary_Interaction_EO_vs_SM_leptin_adlib, file = "deseq2_output/summary_Interaction_EO_vs_SM_leptin_adlib.txt")
 
 # PCA plot
 vsd <- vst(dds, blind = FALSE)
@@ -126,6 +130,7 @@ pca_plot <- ggplot(pcaData, aes(PC1, PC2, color = Tissue, shape = Injection)) +
   coord_fixed()
 print(pca_plot)
 ggsave("deseq2_output/pca_plot.png", plot = pca_plot)
+ggsave("deseq2_output/pca_plot.pdf", plot = pca_plot)
 
 
 # Histograms
@@ -134,24 +139,32 @@ hist_EO_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x=res_EO_leptin_fo
   geom_vline(xintercept = c(0.05, 0.001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (EO Leptin Fooddep vs Saline Fooddep)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_EO_leptin_fooddep_vs_saline_fooddep.png", plot = hist_EO_leptin_fooddep_vs_saline_fooddep)
+ggsave("deseq2_output/histogram_EO_leptin_fooddep_vs_saline_fooddep.pdf", plot = hist_EO_leptin_fooddep_vs_saline_fooddep)
+
 
 hist_EO_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x=res_EO_leptin_adlib_vs_saline_adlib$pvalue), aes(x)) +
   geom_histogram(breaks = seq(0, 1, by = 0.05), col = "slateblue", fill = "skyblue") +
   geom_vline(xintercept = c(0.05, 0.001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (EO Leptin Adlib vs Saline Adlib)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_EO_leptin_adlib_vs_saline_adlib.png", plot = hist_EO_leptin_adlib_vs_saline_adlib)
+ggsave("deseq2_output/histogram_EO_leptin_adlib_vs_saline_adlib.pdf", plot = hist_EO_leptin_adlib_vs_saline_adlib)
+
 
 hist_SM_leptin_fooddep_vs_saline_fooddep <- ggplot(data.frame(x=res_SM_leptin_fooddep_vs_saline_fooddep$pvalue), aes(x)) +
   geom_histogram(breaks = seq(0, 1, by = 0.05), col = "slateblue", fill = "skyblue") +
   geom_vline(xintercept = c(0.05, 0.001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (SM Leptin Fooddep vs Saline Fooddep)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_SM_leptin_fooddep_vs_saline_fooddep.png", plot = hist_SM_leptin_fooddep_vs_saline_fooddep)
+ggsave("deseq2_output/histogram_SM_leptin_fooddep_vs_saline_fooddep.pdf", plot = hist_SM_leptin_fooddep_vs_saline_fooddep)
+
 
 hist_SM_leptin_adlib_vs_saline_adlib <- ggplot(data.frame(x=res_SM_leptin_adlib_vs_saline_adlib$pvalue), aes(x)) +
   geom_histogram(breaks = seq(0, 1, by = 0.05), col = "slateblue", fill = "skyblue") +
   geom_vline(xintercept = c(0.05, 0.001), linetype = "dashed", color = "red") +
   labs(title = "Histogram of p-values (SM Leptin Adlib vs Saline Adlib)", x = "p-value", y = "Count")
 ggsave("deseq2_output/histogram_SM_leptin_adlib_vs_saline_adlib.png", plot = hist_SM_leptin_adlib_vs_saline_adlib)
+ggsave("deseq2_output/histogram_SM_leptin_adlib_vs_saline_adlib.pdf", plot = hist_SM_leptin_adlib_vs_saline_adlib)
+
 
 # Volcano plots
 
@@ -164,8 +177,10 @@ volcano_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin_foo
   pCutoff = pvalue_threshold,
   FCcutoff = foldchange_threshold,
   pointSize = 1.8,
-  labSize = 1.8)
+  labSize = 2.7)
 ggsave("deseq2_output/volcano_EO_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_EO_leptin_fooddep_vs_saline_fooddep)
+ggsave("deseq2_output/volcano_EO_leptin_fooddep_vs_saline_fooddep.pdf", plot = volcano_EO_leptin_fooddep_vs_saline_fooddep)
+
 
 # EO Leptin Adlib vs Saline Adlib
 volcano_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adlib_vs_saline_adlib,
@@ -176,8 +191,10 @@ volcano_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adlib_v
   pCutoff = pvalue_threshold,
   FCcutoff = foldchange_threshold,
   pointSize = 1.8,
-  labSize = 1.8)
+  labSize = 2.7)
 ggsave("deseq2_output/volcano_EO_leptin_adlib_vs_saline_adlib.png", plot = volcano_EO_leptin_adlib_vs_saline_adlib)
+ggsave("deseq2_output/volcano_EO_leptin_adlib_vs_saline_adlib.pdf", plot = volcano_EO_leptin_adlib_vs_saline_adlib)
+
 
 # SM Leptin Fooddep vs Saline Fooddep
 volcano_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin_fooddep_vs_saline_fooddep,
@@ -188,8 +205,10 @@ volcano_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin_foo
   pCutoff = pvalue_threshold,
   FCcutoff = foldchange_threshold,
   pointSize = 1.8,
-  labSize = 1.8)
+  labSize = 2.7)
 ggsave("deseq2_output/volcano_SM_leptin_fooddep_vs_saline_fooddep.png", plot = volcano_SM_leptin_fooddep_vs_saline_fooddep)
+ggsave("deseq2_output/volcano_SM_leptin_fooddep_vs_saline_fooddep.pdf", plot = volcano_SM_leptin_fooddep_vs_saline_fooddep)
+
 
 # SM Leptin Adlib vs Saline Adlib
 volcano_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_vs_saline_adlib,
@@ -200,8 +219,10 @@ volcano_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_v
   pCutoff = pvalue_threshold,
   FCcutoff = foldchange_threshold,
   pointSize = 1.8,
-  labSize = 1.8)
+  labSize = 2.7)
 ggsave("deseq2_output/volcano_SM_leptin_adlib_vs_saline_adlib.png", plot = volcano_SM_leptin_adlib_vs_saline_adlib)
+ggsave("deseq2_output/volcano_SM_leptin_adlib_vs_saline_adlib.pdf", plot = volcano_SM_leptin_adlib_vs_saline_adlib)
+
 
 # MA plots
 
@@ -214,14 +235,12 @@ enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin
     y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    xlim = c(-25, 25),
-    ylim = c(0, 2.5),
+    xlim = c(-40, 40),
+    ylim = c(0, 12),
     pCutoff = pvalue_threshold,
-    FCcutoff = expression_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 1.8,
-    labSize = 4.0,
-    boxedLabels = TRUE,
-    colAlpha = 1,
+    labSize = 2.7,
     legendLabels = c('NS', expression(Log[2]~FC),
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
@@ -229,6 +248,8 @@ enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_EO_leptin
     legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep.png", plot = enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep)
+ggsave("deseq2_output/enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep.pdf", plot = enhanced_ma_EO_leptin_fooddep_vs_saline_fooddep)
+
 
 # EO Leptin Adlib vs Saline Adlib
 res_EO_leptin_adlib_vs_saline_adlib$baseMeanNew <- 1 / (10^log(res_EO_leptin_adlib_vs_saline_adlib$baseMean + 1))
@@ -239,14 +260,12 @@ enhanced_ma_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adl
     y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    xlim = c(-25, 25),
-    ylim = c(0, 2.5),
+    xlim = c(-40, 40),
+    ylim = c(0, 12),
     pCutoff = pvalue_threshold,
-    FCcutoff = expression_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 1.8,
-    labSize = 4.0,
-    boxedLabels = TRUE,
-    colAlpha = 1,
+    labSize = 2.7,
     legendLabels = c('NS', expression(Log[2]~FC),
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
@@ -254,6 +273,8 @@ enhanced_ma_EO_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_EO_leptin_adl
     legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_EO_leptin_adlib_vs_saline_adlib.png", plot = enhanced_ma_EO_leptin_adlib_vs_saline_adlib)
+ggsave("deseq2_output/enhanced_ma_EO_leptin_adlib_vs_saline_adlib.pdf", plot = enhanced_ma_EO_leptin_adlib_vs_saline_adlib)
+
 
 # SM Leptin Fooddep vs Saline Fooddep
 res_SM_leptin_fooddep_vs_saline_fooddep$baseMeanNew <- 1 / (10^log(res_SM_leptin_fooddep_vs_saline_fooddep$baseMean + 1))
@@ -264,14 +285,12 @@ enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin
     y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    xlim = c(-25, 25),
-    ylim = c(0, 2.5),
+    xlim = c(-40, 40),
+    ylim = c(0, 12),
     pCutoff = pvalue_threshold,
-    FCcutoff = expression_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 1.8,
-    labSize = 4.0,
-    boxedLabels = TRUE,
-    colAlpha = 1,
+    labSize = 2.7,
     legendLabels = c('NS', expression(Log[2]~FC),
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
@@ -279,9 +298,11 @@ enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep <- EnhancedVolcano(res_SM_leptin
     legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep.png", plot = enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep)
+ggsave("deseq2_output/enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep.pdf", plot = enhanced_ma_SM_leptin_fooddep_vs_saline_fooddep)
+
 
 # SM Leptin Adlib vs Saline Adlib
-res_SM_leptin_adlib_vs_saline_adlib$baseMeanNew <- 1 / (10^logres_SM_leptin_adlib_vs_saline_adlib$baseMean + 1))
+res_SM_leptin_adlib_vs_saline_adlib$baseMeanNew <- 1 / (10^log(res_SM_leptin_adlib_vs_saline_adlib$baseMean + 1))
 enhanced_ma_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adlib_vs_saline_adlib,
     lab = rownames(res_SM_leptin_adlib_vs_saline_adlib),
     title = 'MA plot: SM Leptin Adlib vs Saline Adlib',
@@ -289,14 +310,12 @@ enhanced_ma_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adl
     y = 'baseMeanNew',
     xlab = bquote(~Log[2]~ 'fold change'),
     ylab = bquote(~Log[e]~ 'base mean + 1'),
-    xlim = c(-25, 25),
-    ylim = c(0, 2.5),
+    xlim = c(-40, 40),
+    ylim = c(0, 12),
     pCutoff = pvalue_threshold,
-    FCcutoff = expression_threshold,
+    FCcutoff = foldchange_threshold,
     pointSize = 1.8,
-    labSize = 4.0,
-    boxedLabels = TRUE,
-    colAlpha = 1,
+    labSize = 2.7,
     legendLabels = c('NS', expression(Log[2]~FC),
       'Mean expression', expression(Mean-expression~and~log[2]~FC)),
     legendPosition = 'bottom',
@@ -304,47 +323,135 @@ enhanced_ma_SM_leptin_adlib_vs_saline_adlib <- EnhancedVolcano(res_SM_leptin_adl
     legendIconSize = 4.0) + coord_flip()
 
 ggsave("deseq2_output/enhanced_ma_SM_leptin_adlib_vs_saline_adlib.png", plot = enhanced_ma_SM_leptin_adlib_vs_saline_adlib)
+ggsave("deseq2_output/enhanced_ma_SM_leptin_adlib_vs_saline_adlib.pdf", plot = enhanced_ma_SM_leptin_adlib_vs_saline_adlib)
 
 
 # Heatmaps
-norm_counts <- DESeq2::counts(dds, normalized = TRUE)
-log_norm_counts <- log2(norm_counts + 1)
+# Load the reshape2 package
+library(reshape2)
 
-# Identify rows with missing or infinite values
-problematic_rows <- apply(log_norm_counts, 1, function(x) any(is.na(x) | is.infinite(x)))
+# Create a function to generate and save heatmaps using ggplot2
+generate_ggplot_heatmap <- function(result_data, contrast_name, foldchange_threshold, pvalue_threshold, expression_threshold) {
+  
+  # Subset the results to meet the thresholds
+  sig_genes <- subset(result_data, abs(log2FoldChange) >= log2(foldchange_threshold) & padj <= pvalue_threshold)
+  
+  # Extract the gene names
+  sig_gene_names <- rownames(sig_genes)
+  
+  # Transform count data using the variance stabilizing transform
+  ddsVST <- vst(dds)
+  
+  # Convert the DESeq transformed object to a data frame
+  ddsVST_df <- as.data.frame(assay(ddsVST))
+  ddsVST_df$Gene <- rownames(ddsVST_df)
+  
+  # Keep only the significantly differentiated genes
+  ddsVST_filtered <- ddsVST_df[ddsVST_df$Gene %in% sig_gene_names,]
+  
+  # Convert the VST counts to long format for ggplot2
+  ddsVST_long <- melt(ddsVST_filtered, id.vars=c("Gene"))
+  
+  # Create and save the heatmap using ggplot2
+  heatmap_plot <- ggplot(ddsVST_long, aes(x=variable, y=Gene, fill=value)) +
+    geom_raster() +
+    scale_fill_viridis(trans = "sqrt") +
+    theme(axis.text.x = element_text(angle = 65, hjust = 1),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank()) +
+    labs(title = paste("Heatmap of Differentially Expressed Genes:", contrast_name),
+         x = "Samples",
+         y = "Genes")
+  
+  # Save heatmap as PDF and PNG
+  ggsave(file.path("deseq2_output", paste(contrast_name, "heatmap.pdf", sep = "_")), heatmap_plot, width = 8, height = 6, units = "in")
+  ggsave(file.path("deseq2_output", paste(contrast_name, "heatmap.png", sep = "_")), heatmap_plot, width = 8, height = 6, units = "in")
+}
+# Transform count data using the variance stabilizing transform
+ddsVST <- vst(dds)
 
-# Remove problematic rows from the data
-filtered_log_norm_counts <- log_norm_counts[!problematic_rows, ]
+# Convert the DESeq transformed object to a data frame
+ddsVST_df <- as.data.frame(assay(ddsVST))
+ddsVST_df$Gene <- rownames(ddsVST_df)
 
-# Remove rows with near-zero variance
-filtered_log_norm_counts <- filtered_log_norm_counts[apply(filtered_log_norm_counts, 1, var) > 1e-10,]
+# Convert the VST counts to long format for ggplot2
+ddsVST_long <- melt(ddsVST_df, id.vars=c("Gene"))
 
-# Remove columns with all-zero values
-all_zero_columns <- apply(filtered_log_norm_counts, 2, function(x) all(x == 0))
-filtered_log_norm_counts <- filtered_log_norm_counts[, !all_zero_columns]
+# Create and save the heatmap for all samples using ggplot2
+all_samples_heatmap <- ggplot(ddsVST_long, aes(x=variable, y=Gene, fill=value)) +
+  geom_raster() +
+  scale_fill_viridis(trans = "sqrt") +
+  theme(axis.text.x = element_text(angle = 65, hjust = 1),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  labs(title = "Heatmap of Differentially Expressed Genes: All Samples",
+       x = "Samples",
+       y = "Genes")
 
-# Update top variable genes matrix
-top_var_genes <- head(order(rowVars(filtered_log_norm_counts), decreasing = TRUE), 100)
-mat_top_var_genes <- filtered_log_norm_counts[top_var_genes, ]
+# Convert the significant genes back to a matrix for clustering
+ddsVST_matrix <- dcast(ddsVST_long, Gene ~ variable)
+rownames(ddsVST_matrix) <- ddsVST_matrix$Gene
+ddsVST_matrix$Gene <- NULL
 
-# Heatmap for EO Leptin Fooddep vs Saline Fooddep
-EO_leptin_fooddep_vs_saline_fooddep <- mat_top_var_genes[, colData(dds)$group %in% c("EO_leptin_fooddep", "EO_saline_fooddep")]
-pheatmap(EO_leptin_fooddep_vs_saline_fooddep, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
+# Compute a distance calculation on both dimensions of the matrix
+distanceGene <- dist(ddsVST_matrix)
+distanceSample <- dist(t(ddsVST_matrix))
 
-# Heatmap for EO Leptin Adlib vs Saline Adlib
-EO_leptin_adlib_vs_saline_adlib <- mat_top_var_genes[, colData(dds)$group %in% c("EO_leptin_adlib", "EO_saline_adlib")]
-pheatmap(EO_leptin_adlib_vs_saline_adlib, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
+# Cluster based on the distance calculations
+clusterGene <- hclust(distanceGene, method="average")
+clusterSample <- hclust(distanceSample, method="average")
 
-# Heatmap for SM Leptin Fooddep vs Saline Fooddep
-SM_leptin_fooddep_vs_saline_fooddep <- mat_top_var_genes[, colData(dds)$group %in% c("SM_leptin_fooddep", "SM_saline_fooddep")]
-pheatmap(SM_leptin_fooddep_vs_saline_fooddep, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
+# Construct a dendrogram for samples
+install.packages("ggdendro")
+library(ggdendro)
+sampleModel <- as.dendrogram(clusterSample)
+sampleDendrogramData <- segment(dendro_data(sampleModel, type = "rectangle"))
+sampleDendrogram <- ggplot(sampleDendrogramData) + geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) + theme_dendro()
 
-# Heatmap for SM Leptin Adlib vs Saline Adlib
-SM_leptin_adlib_vs_saline_adlib <- mat_top_var_genes[, colData(dds)$group %in% c("SM_leptin_adlib", "SM_saline_adlib")]
-pheatmap(SM_leptin_adlib_vs_saline_adlib, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
+# Re-factor samples for ggplot2
+ddsVST_long$variable <- factor(ddsVST_long$variable, levels=clusterSample$labels[clusterSample$order])
 
-# General heatmap with hierarchical clustering of all the samples together
-pheatmap(mat_top_var_genes, cluster_rows = TRUE, cluster_cols = TRUE, scale = "row", annotation_col = colData(dds)[, "group", drop = FALSE])
+# Construct the heatmap. note that at this point we have only clustered the samples NOT the genes
+heatmap <- ggplot(ddsVST_long, aes(x=variable, y=Gene, fill=value)) + geom_raster() + scale_fill_viridis(trans="sqrt") + theme(axis.text.x=element_text(angle=65, hjust=1), axis.text.y=element_blank(), axis.ticks.y=element_blank())
+heatmap
 
+# Combine the dendrogram and the heatmap
+install.packages("gridExtra")
+library(gridExtra)
+grid.arrange(sampleDendrogram, heatmap, ncol=1, heights=c(1,5))
 
+# Load in libraries necessary for modifying plots
+library(gtable)
+library(grid)
 
+# Modify the ggplot objects
+sampleDendrogram_1 <- sampleDendrogram + scale_x_continuous(expand=c(.0085, .0085)) + scale_y_continuous(expand=c(0, 0))
+heatmap_1 <- heatmap + scale_x_discrete(expand=c(0, 0)) + scale_y_discrete(expand=c(0, 0))
+
+# Convert both grid-based objects to grobs
+sampleDendrogramGrob <- ggplotGrob(sampleDendrogram_1)
+heatmapGrob <- ggplotGrob(heatmap_1)
+
+# Add in the missing columns
+sampleDendrogramGrob <- gtable_add_cols(sampleDendrogramGrob, heatmapGrob$widths[7], 6)
+sampleDendrogramGrob <- gtable_add_cols(sampleDendrogramGrob, heatmapGrob$widths[8], 7)
+
+# Make sure every width between the two grobs is the same
+maxWidth <- unit.pmax(sampleDendrogramGrob$widths, heatmapGrob$widths)
+sampleDendrogramGrob$widths <- as.list(maxWidth)
+heatmapGrob$widths <- as.list(maxWidth)
+
+# Arrange the grobs into a plot
+finalGrob <- arrangeGrob(sampleDendrogramGrob, heatmapGrob, ncol=1, heights=c(2,5))
+
+# Draw the plot
+grid.draw(finalGrob)
+
+# Save the heatmap as PDF and PNG
+pdf("deseq2_output/heatmap_with_dendrograms.pdf", height = 9, width = 6)
+grid.draw(finalGrob)
+dev.off()
+
+png("deseq2_output/heatmap_with_dendrograms.png", height = 9, width = 6, units = "in", res = 300)
+grid.draw(finalGrob)
+dev.off()
