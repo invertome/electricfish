@@ -1,5 +1,5 @@
 # THIS SCRIPT WILL:
-# Install necessary packages (DESeq2, tximport, ggplot2, pheatmap, EnhancedVolcano, and limma).
+# Install necessary packages (DESeq2, tximport, ggplot2, EnhancedVolcano, and limma).
 # Load packages.
 # Read metadata from the "Sample_Metadata.csv" file.
 # Set fold-change and p-value thresholds.
@@ -18,7 +18,7 @@
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
-BiocManager::install(c("DESeq2", "tximport", "ggplot2", "pheatmap", "EnhancedVolcano", "limma"))
+BiocManager::install(c("DESeq2", "tximport", "ggplot2", "EnhancedVolcano", "limma"))
 install.packages("scales")
 install.packages("reshape2")
 install.packages("viridis")
@@ -27,7 +27,6 @@ install.packages("viridis")
 library(DESeq2)
 library(tximport)
 library(ggplot2)
-library(pheatmap)
 library(EnhancedVolcano)
 library(limma)
 library(scales) # needed for oob parameter
@@ -37,7 +36,7 @@ library(viridis)
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
 
 # Set fold-change and p-value thresholds
-foldchange_threshold <- 4
+foldchange_threshold <- 7
 pvalue_threshold <- 0.000001
 expression_threshold <- 2
 
@@ -61,6 +60,7 @@ contrasts <- list(
   SM_leptin_fooddep_vs_SM_leptin_adlib = c(0, 0, 1, 0, 0, 0, 0, -1),
   EO_saline_fooddep_vs_SM_saline_fooddep = c(0, 0, 0, 0, 1, -1, 0, 0),
   EO_saline_adlib_vs_SM_saline_adlib = c(0, 0, 0, 0, 1, 0, 0, -1),
+  EO_leptin_fooddep_vs_SM_leptin_fooddep = c(0, 0, 1, -1, -1, 1, 0, 0),
   Interaction_EO_vs_SM_leptin_fooddep = c(0, 0, 1, -1, -1, 1, 0, 0),
   Interaction_EO_vs_SM_leptin_adlib = c(0, 0, 1, 0, -1, 0, 0, 1)
   
@@ -76,8 +76,49 @@ res_EO_leptin_fooddep_vs_EO_leptin_adlib <- results(dds, contrast = contrasts[["
 res_SM_leptin_fooddep_vs_SM_leptin_adlib <- results(dds, contrast = contrasts[["SM_leptin_fooddep_vs_SM_leptin_adlib"]])
 res_EO_saline_fooddep_vs_SM_saline_fooddep <- results(dds, contrast = contrasts[["EO_saline_fooddep_vs_SM_saline_fooddep"]])
 res_EO_saline_adlib_vs_SM_saline_adlib <- results(dds, contrast = contrasts[["EO_saline_adlib_vs_SM_saline_adlib"]])
+res_EO_leptin_fooddep_vs_SM_leptin_fooddep <- results(dds, contrast = contrasts[["EO_leptin_fooddep_vs_SM_leptin_fooddep"]])
 res_Interaction_EO_vs_SM_leptin_fooddep <- results(dds, contrast = contrasts[["Interaction_EO_vs_SM_leptin_fooddep"]])
 res_Interaction_EO_vs_SM_leptin_adlib <- results(dds, contrast = contrasts[["Interaction_EO_vs_SM_leptin_adlib"]])
+
+# Function to filter genes and save to file
+save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange_threshold) {
+  filtered <- subset(res, padj < pvalue_threshold & abs(log2FoldChange) > foldchange_threshold)
+  output_directory <- "deseq2_output"
+  output_filename <- paste0(output_directory, "/", contrast_name, "_filtered_genes.csv")
+  
+  # Extract the required columns
+  filtered_data <- data.frame(
+    Gene = row.names(filtered),
+    log2FoldChange = filtered$log2FoldChange,
+    pvalue = filtered$pvalue,
+    padj = filtered$padj,
+    baseMean = filtered$baseMean
+  )
+  
+  # Print information for debugging
+  print(paste("Saving data for contrast:", contrast_name))
+  print(paste("Number of filtered genes:", nrow(filtered_data)))
+  print(paste("Output file:", output_filename))
+  
+  # Save the data frame as a .csv file
+  write.table(filtered_data, file = output_filename, sep = ",", col.names = TRUE, row.names = FALSE, quote = FALSE)
+}
+
+
+# Apply contrasts, filter genes, and save to files
+for (contrast_name in names(contrasts)) {
+  res <- results(dds, contrast = contrasts[[contrast_name]])
+  save_filtered_genes(res, contrast_name, pvalue_threshold, foldchange_threshold)
+}
+
+
+## Look for genes that intersect between EO leptin food dep vs. EO saline food dep AND EO leptin food dep vs SM leptin food dep 
+filtered_EO_leptin_fooddep_vs_saline_fooddep <- save_filtered_genes(res_EO_leptin_fooddep_vs_saline_fooddep, "EO_leptin_fooddep_vs_saline_fooddep", pvalue_threshold, foldchange_threshold)
+filtered_EO_leptin_fooddep_vs_SM_leptin_fooddep <- save_filtered_genes(res_EO_leptin_fooddep_vs_SM_leptin_fooddep, "EO_leptin_fooddep_vs_SM_leptin_fooddep", pvalue_threshold, foldchange_threshold)
+common_genes <- intersect(filtered_EO_leptin_fooddep_vs_saline_fooddep$Gene, filtered_EO_leptin_fooddep_vs_SM_leptin_fooddep$Gene)
+write.table(common_genes, file = "salmon_output/common_filtered_genes.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
+
 
 # Save results
 dir.create("deseq2_output")
