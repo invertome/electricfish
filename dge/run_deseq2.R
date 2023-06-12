@@ -12,6 +12,7 @@
 # Create and save histograms for each comparison.
 # Create and save volcano plots for each comparison.
 # Create and save enhanced MA plots for each comparison.
+# Create and save a heatmap
 
 # Load packages
 library(DESeq2)
