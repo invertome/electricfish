@@ -6,6 +6,12 @@ library(EnhancedVolcano)
 library(limma)
 library(scales) # needed for oob parameter
 library(viridis)
+library(reshape2)
+library(grid)
+library(gtable)
+library(gridExtra)
+library(ggdendro)
+library(cluster)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -14,8 +20,8 @@ metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
 metadata$condition <- paste(metadata$Tissue, metadata$Injection, metadata$Feeding, sep = "_")
 
 # Set fold-change and p-value thresholds
-foldchange_threshold <- 7
-pvalue_threshold <- 0.000001
+foldchange_threshold <- 4
+pvalue_threshold <- 0.001
 expression_threshold <- 2
 
 # Import Salmon output
@@ -29,14 +35,14 @@ dds <- DESeq(dds)
 
 # Define contrasts
 contrasts <- list(
-  c("condition", "EO_saline_adlib", "EO_saline_fooddep"),
-  c("condition", "SM_saline_fooddep", "EO_saline_adlib"),
-  c("condition", "SM_saline_fooddep", "EO_saline_fooddep"),
-  c("condition", "EO_saline_adlib", "EO_leptin_adlib"),
-  c("condition", "SM_leptin_adlib", "EO_leptin_adlib"),
-  c("condition", "EO_saline_fooddep", "EO_leptin_fooddep"),
-  c("condition", "SM_leptin_fooddep", "EO_leptin_fooddep"),
-  c("condition", "EO_leptin_adlib", "EO_leptin_fooddep")
+  c("condition", "EO_saline_fooddep", "EO_saline_adlib"),
+  c("condition", "EO_saline_adlib", "SM_saline_fooddep"),
+  c("condition", "EO_saline_fooddep", "SM_saline_fooddep"),
+  c("condition", "EO_leptin_adlib", "EO_saline_adlib"),
+  c("condition", "EO_leptin_adlib", "SM_leptin_adlib"),
+  c("condition", "EO_leptin_fooddep", "EO_saline_fooddep"),
+  c("condition", "EO_leptin_fooddep", "SM_leptin_fooddep"),
+  c("condition", "EO_leptin_fooddep", "EO_leptin_adlib")
 )
 
 # Apply contrasts and get results
@@ -46,15 +52,16 @@ res_list <- lapply(contrasts, function(cntrst) {
 })
 
 names(res_list) <- c(
-  "EO_saline_adlib_vs_EO_saline_fooddep",
-  "SM_saline_fooddep_vs_EO_saline_adlib",
-  "SM_saline_fooddep_vs_SM_saline_fooddep",
-  "EO_saline_adlib_vs_EO_leptin_adlib",
-  "SM_leptin_adlib_vs_EO_leptin_adlib",
-  "EO_saline_fooddep_vs_EO_leptin_fooddep",
-  "SM_leptin_fooddep_vs_EO_leptin_fooddep",
-  "EO_leptin_adlib_vs_EO_leptin_fooddep"
+  "EO_saline_fooddep_vs_EO_saline_adlib",
+  "EO_saline_adlib_vs_SM_saline_fooddep",
+  "EO_saline_fooddep_vs_SM_saline_fooddep",
+  "EO_leptin_adlib_vs_EO_saline_adlib",
+  "EO_leptin_adlib_vs_SM_leptin_adlib",
+  "EO_leptin_fooddep_vs_EO_saline_fooddep",
+  "EO_leptin_fooddep_vs_SM_leptin_fooddep",
+  "EO_leptin_fooddep_vs_EO_leptin_adlib"
 )
+
 
 # Save results
 lapply(names(res_list), function(x) {
@@ -97,11 +104,11 @@ filtered_res_list <- lapply(names(res_list), function(x) {
 names(filtered_res_list) <- names(res_list)  # Naming the filtered results similar to original results
 
 # Finding common genes
-filtered_EO_leptin_fooddep_vs_saline_fooddep <- filtered_res_list[["EO_saline_fooddep_vs_EO_leptin_fooddep"]]
-filtered_EO_leptin_fooddep_vs_SM_leptin_fooddep <- filtered_res_list[["SM_leptin_fooddep_vs_EO_leptin_fooddep"]]
+filtered_EO_saline_fooddep_vs_leptin_fooddep <- filtered_res_list[["EO_leptin_fooddep_vs_EO_saline_fooddep"]]
+filtered_SM_leptin_fooddep_vs_EO_leptin_fooddep <- filtered_res_list[["EO_leptin_fooddep_vs_SM_leptin_fooddep"]]
 
-common_genes <- intersect(filtered_EO_leptin_fooddep_vs_saline_fooddep$Gene, filtered_EO_leptin_fooddep_vs_SM_leptin_fooddep$Gene)
-write.table(common_genes, file = "deseq2_output/common_filtered_genes_EO_saline_fooddep_vs_EO_leptin_fooddep-SM_leptin_fooddep_vs_EO_leptin_fooddep.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+common_genes <- intersect(filtered_EO_saline_fooddep_vs_leptin_fooddep$Gene, filtered_SM_leptin_fooddep_vs_EO_leptin_fooddep$Gene)
+write.table(common_genes, file = "deseq2_output/common_filtered_genes-EO_leptin_fooddep_vs_EO_saline_fooddep-EO_leptin_fooddep_vs_SM_leptin_fooddep.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
 
 # PCA plot (note that this is not specific to a contrast, so is only done once)
 vsd <- vst(dds, blind = FALSE)
@@ -166,3 +173,5 @@ for (contrast_name in names(res_list)) {
   ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".png"), plot = enhanced_ma)
   ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".pdf"), plot = enhanced_ma)
 }
+
+
