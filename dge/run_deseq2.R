@@ -219,6 +219,7 @@ for (contrast_name in names(res_list)) {
          show_rownames = FALSE,
          main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name),
          filename = paste0("deseq2_output/filtered_heatmap_log_transformed_", contrast_name, ".png"))
+
 }
 
 
