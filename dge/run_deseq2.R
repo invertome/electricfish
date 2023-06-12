@@ -32,7 +32,7 @@ metadata$condition <- paste(metadata$Tissue, metadata$Injection, metadata$Feedin
 
 # Set fold-change and p-value thresholds
 foldchange_threshold <- 4
-pvalue_threshold <- 0.001
+pvalue_threshold <- 0.00001
 expression_threshold <- 2
 
 # Import Salmon output
@@ -196,42 +196,82 @@ for (contrast_name in names(res_list)) {
   # Z-scores and log-transformed counts for the filtered genes
   filtered_log_transformed_counts <- log2(filtered_normalized_counts + 1)
   
-  # Heatmap
-  # Save the heatmap to a .png file
-  png(paste0("deseq2_output/filtered_heatmap_log_transformed_", contrast_name, ".png"))
-  heatmap.2(as.matrix(filtered_log_transformed_counts),
-            trace = "none",
-            margins = c(5,10),
-            col = viridis(100),
-            dendrogram = 'both',
-            Rowv = TRUE,
-            Colv = TRUE,
-            scale = "none",
-            key = TRUE,
-            keysize = 1.2,
-            cexRow = 0.6,
-            cexCol = 0.6,
-            main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name))
-  dev.off()
-
-  # Save the heatmap to a .pdf file
-  pdf(paste0("deseq2_output/filtered_heatmap_log_transformed_", contrast_name, ".pdf"))
-  heatmap.2(as.matrix(filtered_log_transformed_counts),
-            trace = "none",
-            margins = c(5,10),
-            col = viridis(100),
-            dendrogram = 'both',
-            Rowv = TRUE,
-            Colv = TRUE,
-            scale = "none",
-            key = TRUE,
-            keysize = 1.2,
-            cexRow = 0.6,
-            cexCol = 0.6,
-            main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name))
-  dev.off()
-
 }
+
+
+# Apply contrasts, filter genes, and save to files
+filtered_res_list <- lapply(names(res_list), function(x) {
+  filtered_res <- save_filtered_genes(res_list[[x]], x, pvalue_threshold, foldchange_threshold)
+  return(filtered_res)
+})
+
+names(filtered_res_list) <- names(res_list)  # Naming the filtered results similar to original results
+
+# Finding all unique genes across all contrasts
+all_genes <- Reduce(union, lapply(filtered_res_list, function(x) x$Gene))
+write.table(all_genes, file = "deseq2_output/all_filtered_genes_all_contrasts.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
+# Extract normalized counts
+normalized_counts <- counts(dds, normalized=TRUE)
+
+# Filter normalized counts for the all genes across all contrasts
+filtered_normalized_counts <- normalized_counts[all_genes,]
+
+# Z-scores and log-transformed counts for the filtered genes
+filtered_log_transformed_counts <- log2(filtered_normalized_counts + 1)
+
+# Log10-transformed counts for the filtered genes
+filtered_log10_transformed_counts <- log10(filtered_normalized_counts + 1)
+
+# Variance Stabilizing Transformed counts for the filtered genes
+vst_transformed_counts <- assay(vst(dds, blind=FALSE))
+filtered_vst_transformed_counts <- vst_transformed_counts[all_genes,]
+
+# Heatmap function to avoid repetition
+plot_heatmap <- function(counts_matrix, filename, title){
+  # Save the heatmap to a .png file
+  png(paste0("deseq2_output/", filename, ".png"))
+  heatmap.2(as.matrix(counts_matrix),
+            trace = "none",
+            margins = c(5,10),
+            col = viridis(100),
+            dendrogram = 'both',
+            Rowv = TRUE,
+            Colv = TRUE,
+            labCol = colnames(counts_matrix),
+            labRow = FALSE,
+            scale = "none",
+            key = TRUE,
+            keysize = 1.2,
+            cexRow = 0.6,
+            cexCol = 0.6,
+            main = title)
+  dev.off()
+  
+  # Save the heatmap to a .pdf file
+  pdf(paste0("deseq2_output/", filename, ".pdf"))
+  heatmap.2(as.matrix(counts_matrix),
+            trace = "none",
+            margins = c(5,10),
+            col = viridis(100),
+            dendrogram = 'both',
+            Rowv = TRUE,
+            Colv = TRUE,
+            labCol = colnames(counts_matrix),
+            labRow = FALSE,
+            scale = "none",
+            key = TRUE,
+            keysize = 1.2,
+            cexRow = 0.6,
+            cexCol = 0.6,
+            main = title)
+  dev.off()
+}
+
+# Plot heatmaps for log2-transformed, log10-transformed, and vst-transformed counts
+plot_heatmap(filtered_log_transformed_counts, "filtered_heatmap_log2_transformed_all_contrasts", "Gene Expression Heatmap (log2-transformed)")
+plot_heatmap(filtered_log10_transformed_counts, "filtered_heatmap_log10_transformed_all_contrasts", "Gene Expression (log10-transformed)")
+plot_heatmap(filtered_vst_transformed_counts, "filtered_heatmap_vst_transformed_all_contrasts", "Gene Expression (VST)")
 
 
 
