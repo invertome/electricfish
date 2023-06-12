@@ -22,12 +22,7 @@ library(limma)
 library(scales) # needed for oob parameter
 library(viridis)
 library(reshape2)
-library(grid)
-library(gtable)
-library(gridExtra)
-library(ggdendro)
-library(cluster)
-library(pheatmap)
+library(gplots)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -200,25 +195,41 @@ for (contrast_name in names(res_list)) {
 
   # Z-scores and log-transformed counts for the filtered genes
   filtered_log_transformed_counts <- log2(filtered_normalized_counts + 1)
+  
+  # Heatmap
+  # Save the heatmap to a .png file
+  png(paste0("deseq2_output/filtered_heatmap_log_transformed_", contrast_name, ".png"))
+  heatmap.2(as.matrix(filtered_log_transformed_counts),
+            trace = "none",
+            margins = c(5,10),
+            col = viridis(100),
+            dendrogram = 'both',
+            Rowv = TRUE,
+            Colv = TRUE,
+            scale = "none",
+            key = TRUE,
+            keysize = 1.2,
+            cexRow = 0.6,
+            cexCol = 0.6,
+            main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name))
+  dev.off()
 
-
-  # Plot hierarchically clustered heatmap using log-transformed values for filtered genes
-  pheatmap::pheatmap(filtered_log_transformed_counts,
-         cluster_rows = TRUE,
-         cluster_cols = TRUE,
-         scale = "none", # data is already log-transformed
-         show_rownames = FALSE,
-         main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name))
-
-  # Save the heatmaps to files
-
-  pheatmap::pheatmap(filtered_log_transformed_counts,
-         cluster_rows = TRUE,
-         cluster_cols = TRUE,
-         scale = "none",
-         show_rownames = FALSE,
-         main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name),
-         filename = paste0("deseq2_output/filtered_heatmap_log_transformed_", contrast_name, ".png"))
+  # Save the heatmap to a .pdf file
+  pdf(paste0("deseq2_output/filtered_heatmap_log_transformed_", contrast_name, ".pdf"))
+  heatmap.2(as.matrix(filtered_log_transformed_counts),
+            trace = "none",
+            margins = c(5,10),
+            col = viridis(100),
+            dendrogram = 'both',
+            Rowv = TRUE,
+            Colv = TRUE,
+            scale = "none",
+            key = TRUE,
+            keysize = 1.2,
+            cexRow = 0.6,
+            cexCol = 0.6,
+            main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name))
+  dev.off()
 
 }
 
