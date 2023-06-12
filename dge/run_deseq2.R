@@ -270,9 +270,9 @@ plot_heatmap <- function(counts_matrix, filename, title){
 }
 
 # Plot heatmaps for log2-transformed, log10-transformed, and vst-transformed counts
-plot_heatmap(filtered_log_transformed_counts, "filtered_heatmap_log2_transformed_all_contrasts", "Gene Expression Heatmap (log2-transformed)")
-plot_heatmap(filtered_log10_transformed_counts, "filtered_heatmap_log10_transformed_all_contrasts", "Gene Expression (log10-transformed)")
-plot_heatmap(filtered_vst_transformed_counts, "filtered_heatmap_vst_transformed_all_contrasts", "Gene Expression (VST)")
+plot_heatmap(filtered_log_transformed_counts, "filtered_heatmap_log2_transformed_all_contrasts", "Gene Expression Heatmap (log2)")
+plot_heatmap(filtered_log10_transformed_counts, "filtered_heatmap_log10_transformed_all_contrasts", "Gene Expression Heatmap (log10)")
+plot_heatmap(filtered_vst_transformed_counts, "filtered_heatmap_vst_transformed_all_contrasts", "Gene Expression Heatmap (VST)")
 
 
 
