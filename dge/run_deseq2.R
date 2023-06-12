@@ -80,8 +80,8 @@ lapply(names(res_list), function(x) {
 })
 
 # Function to filter genes and save to file
-save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange_threshold) {
-  filtered <- subset(res, padj < pvalue_threshold & abs(log2FoldChange) > foldchange_threshold)
+save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange_threshold, expression_threshold) {
+  filtered <- subset(res, padj < pvalue_threshold & abs(log2FoldChange) > foldchange_threshold & baseMean > expression_threshold)
   output_directory <- "deseq2_output"
   output_filename <- paste0(output_directory, "/", contrast_name, "_filtered_genes.csv")
   
@@ -108,9 +108,10 @@ save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange
 
 # Apply contrasts, filter genes, and save to files
 filtered_res_list <- lapply(names(res_list), function(x) {
-  filtered_res <- save_filtered_genes(res_list[[x]], x, pvalue_threshold, foldchange_threshold)
+  filtered_res <- save_filtered_genes(res_list[[x]], x, pvalue_threshold, foldchange_threshold, expression_threshold)
   return(filtered_res)
 })
+
 
 names(filtered_res_list) <- names(res_list)  # Naming the filtered results similar to original results
 
