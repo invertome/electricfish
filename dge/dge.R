@@ -102,3 +102,67 @@ filtered_EO_leptin_fooddep_vs_SM_leptin_fooddep <- filtered_res_list[["SM_leptin
 
 common_genes <- intersect(filtered_EO_leptin_fooddep_vs_saline_fooddep$Gene, filtered_EO_leptin_fooddep_vs_SM_leptin_fooddep$Gene)
 write.table(common_genes, file = "deseq2_output/common_filtered_genes_EO_saline_fooddep_vs_EO_leptin_fooddep-SM_leptin_fooddep_vs_EO_leptin_fooddep.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
+# PCA plot (note that this is not specific to a contrast, so is only done once)
+vsd <- vst(dds, blind = FALSE)
+pcaData <- plotPCA(vsd, intgroup = c("Tissue", "Injection", "Feeding"), returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+pca_plot <- ggplot(pcaData, aes(PC1, PC2, color = Tissue, shape = Injection)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  coord_fixed()
+print(pca_plot)
+ggsave("deseq2_output/pca_plot.png", plot = pca_plot)
+ggsave("deseq2_output/pca_plot.pdf", plot = pca_plot)
+
+# Histograms, volcano plots, MA plots
+for (contrast_name in names(res_list)) {
+  res <- res_list[[contrast_name]]
+  filtered_res <- filtered_res_list[[contrast_name]]
+
+  # Histogram
+  hist <- ggplot(data.frame(x=res$pvalue), aes(x)) +
+    geom_histogram(breaks = seq(0, 1, by = 0.05), col = "slateblue", fill = "skyblue") +
+    geom_vline(xintercept = c(0.05, 0.001), linetype = "dashed", color = "red") +
+    labs(title = paste0("Histogram of p-values (", contrast_name, ")"), x = "p-value", y = "Count")
+  ggsave(paste0("deseq2_output/histogram_", contrast_name, ".png"), plot = hist)
+  ggsave(paste0("deseq2_output/histogram_", contrast_name, ".pdf"), plot = hist)
+
+  # Volcano plot
+  volcano <- EnhancedVolcano(res,
+    lab = rownames(res),
+    x = 'log2FoldChange',
+    y = 'pvalue',
+    title = contrast_name,
+    pCutoff = pvalue_threshold,
+    FCcutoff = foldchange_threshold,
+    pointSize = 1.8,
+    labSize = 2.7)
+  ggsave(paste0("deseq2_output/volcano_", contrast_name, ".png"), plot = volcano)
+  ggsave(paste0("deseq2_output/volcano_", contrast_name, ".pdf"), plot = volcano)
+
+  # MA plot
+  res$baseMeanNew <- 1 / (10^log(res$baseMean + 1))
+  enhanced_ma <- EnhancedVolcano(res,
+    lab = rownames(res),
+    title = paste0('MA plot: ', contrast_name),
+    x = 'log2FoldChange',
+    y = 'baseMeanNew',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~Log[e]~ 'base mean + 1'),
+    xlim = c(-40, 40),
+    ylim = c(0, 12),
+    pCutoff = pvalue_threshold,
+    FCcutoff = foldchange_threshold,
+    pointSize = 1.8,
+    labSize = 2.7,
+    legendLabels = c('NS', expression(Log[2]~FC),
+      'Mean expression', expression(Mean-expression~and~log[2]~FC)),
+    legendPosition = 'bottom',
+    legendLabSize = 16,
+    legendIconSize = 4.0) + coord_flip()
+
+  ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".png"), plot = enhanced_ma)
+  ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".pdf"), plot = enhanced_ma)
+}
