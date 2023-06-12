@@ -189,4 +189,3 @@ for (contrast_name in names(res_list)) {
   ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".pdf"), plot = enhanced_ma)
 }
 
-
