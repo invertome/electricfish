@@ -27,6 +27,7 @@ library(gtable)
 library(gridExtra)
 library(ggdendro)
 library(cluster)
+library(pheatmap)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -187,5 +188,38 @@ for (contrast_name in names(res_list)) {
 
   ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".png"), plot = enhanced_ma)
   ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".pdf"), plot = enhanced_ma)
+  
+    # Filter genes that pass the logfoldchange and pvalue thresholds
+  filtered_genes <- rownames(subset(res, padj < pvalue_threshold & abs(log2FoldChange) > foldchange_threshold))
+
+  # Extract normalized counts
+  normalized_counts <- counts(dds, normalized=TRUE)
+
+  # Filter normalized counts for the filtered genes
+  filtered_normalized_counts <- normalized_counts[filtered_genes,]
+
+  # Z-scores and log-transformed counts for the filtered genes
+  filtered_log_transformed_counts <- log2(filtered_normalized_counts + 1)
+
+
+  # Plot hierarchically clustered heatmap using log-transformed values for filtered genes
+  pheatmap::pheatmap(filtered_log_transformed_counts,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         scale = "none", # data is already log-transformed
+         show_rownames = FALSE,
+         main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name))
+
+  # Save the heatmaps to files
+
+  pheatmap::pheatmap(filtered_log_transformed_counts,
+         cluster_rows = TRUE,
+         cluster_cols = TRUE,
+         scale = "none",
+         show_rownames = FALSE,
+         main = paste0("Filtered Heatmap (log2-transformed): ", contrast_name),
+         filename = paste0("deseq2_output/filtered_heatmap_log_transformed_", contrast_name, ".png"))
 }
+
+
 
