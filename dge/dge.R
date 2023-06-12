@@ -1,3 +1,18 @@
+# THIS SCRIPT WILL:
+# Install necessary packages (DESeq2, tximport, ggplot2, EnhancedVolcano, and limma).
+# Load packages.
+# Read metadata from the "Sample_Metadata.csv" file.
+# Set fold-change and p-value thresholds.
+# Import Salmon output.
+# Create DESeq2 object.
+# Define contrasts for various comparisons.
+# Apply contrasts and obtain results for each comparison.
+# Save the results and summaries to CSV files in the "deseq2_output" directory.
+# Create and save PCA plot.
+# Create and save histograms for each comparison.
+# Create and save volcano plots for each comparison.
+# Create and save enhanced MA plots for each comparison.
+
 # Load packages
 library(DESeq2)
 library(tximport)
