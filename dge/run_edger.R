@@ -25,38 +25,57 @@ library(viridis)
 library(reshape2)
 library(gplots)
 
-# Read metadata
-metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
-
-# Modify metadata to have a combined condition column
-metadata$condition <- paste(metadata$Tissue, metadata$Injection, metadata$Feeding, sep = "_")
 
 # Set fold-change and p-value thresholds
 lfc_threshold <- log2(4)  # Convert fold-change threshold to log2 scale
 pvalue_threshold <- 0.00001
 cpm_threshold <- log2(2)  # Convert counts per million (CPM) threshold to log2 scale
 
+# Read metadata
+metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
+
 # Import Salmon output
 samples <- metadata$SampleID
 files <- file.path("salmon_output", samples, "quant.sf")
 txi <- tximport(files, type = "salmon", txOut = TRUE)
 
+# Modify metadata to have a combined condition column
+metadata$condition <- paste(metadata$Tissue, metadata$Injection, metadata$Feeding, sep = "_")
+
+# Create the design matrix
+design <- model.matrix(~0 + condition, data = metadata)
+colnames(design) <- levels(metadata$condition)
+
+# Define the group and factor
+group <- factor(metadata$condition)
+
+# Generate the design matrix
+design <- model.matrix(~0 + group)
+
+# Make sure to assign column names to your design matrix that match your conditions
+colnames(design) <- levels(group)
+
 # Create DGEList object
-dds <- DGEList(counts = txi$counts, group = metadata$condition)
+dds <- DGEList(counts = txi$counts)
 dds <- calcNormFactors(dds)
+
+# Estimate dispersions
+dds <- estimateDisp(dds, design)
+
 
 # Define contrasts
 contrasts <- makeContrasts(
-  "conditionEO_saline_fooddep - conditionEO_saline_adlib",
-  "conditionEO_saline_adlib - conditionSM_saline_fooddep",
-  "conditionEO_saline_fooddep - conditionSM_saline_fooddep",
-  "conditionEO_leptin_adlib - conditionEO_saline_adlib",
-  "conditionEO_leptin_adlib - conditionSM_leptin_adlib",
-  "conditionEO_leptin_fooddep - conditionEO_saline_fooddep",
-  "conditionEO_leptin_fooddep - conditionSM_leptin_fooddep",
-  "conditionEO_leptin_fooddep - conditionEO_leptin_adlib",
-  levels = design
+  "EO_saline_fooddep - EO_saline_adlib",
+  "EO_saline_adlib - SM_saline_fooddep",
+  "EO_saline_fooddep - SM_saline_fooddep",
+  "EO_leptin_adlib - EO_saline_adlib",
+  "EO_leptin_adlib - SM_leptin_adlib",
+  "EO_leptin_fooddep - EO_saline_fooddep",
+  "EO_leptin_fooddep - SM_leptin_fooddep",
+  "EO_leptin_fooddep - EO_leptin_adlib",
+  levels = colnames(design)
 )
+
 
 # Apply contrasts and get results
 dds <- estimateDisp(dds, design)
