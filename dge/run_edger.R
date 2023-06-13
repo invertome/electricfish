@@ -65,14 +65,14 @@ dds <- estimateDisp(dds, design)
 
 # Define contrasts
 contrasts <- makeContrasts(
-  "EO_saline_fooddep - EO_saline_adlib",
-  "EO_saline_adlib - SM_saline_fooddep",
-  "EO_saline_fooddep - SM_saline_fooddep",
-  "EO_leptin_adlib - EO_saline_adlib",
-  "EO_leptin_adlib - SM_leptin_adlib",
-  "EO_leptin_fooddep - EO_saline_fooddep",
-  "EO_leptin_fooddep - SM_leptin_fooddep",
-  "EO_leptin_fooddep - EO_leptin_adlib",
+  EO_saline_fooddep_vs_EO_saline_adlib = "EO_saline_fooddep - EO_saline_adlib",
+  EO_saline_adlib_vs_SM_saline_fooddep = "EO_saline_adlib - SM_saline_fooddep",
+  EO_saline_fooddep_vs_SM_saline_fooddep = "EO_saline_fooddep - SM_saline_fooddep",
+  EO_leptin_adlib_vs_EO_saline_adlib = "EO_leptin_adlib - EO_saline_adlib",
+  EO_leptin_adlib_vs_SM_leptin_adlib = "EO_leptin_adlib - SM_leptin_adlib",
+  EO_leptin_fooddep_vs_EO_saline_fooddep = "EO_leptin_fooddep - EO_saline_fooddep",
+  EO_leptin_fooddep_vs_SM_leptin_fooddep = "EO_leptin_fooddep - SM_leptin_fooddep",
+  EO_leptin_fooddep_vs_EO_leptin_adlib = "EO_leptin_fooddep - EO_leptin_adlib",
   levels = colnames(design)
 )
 
@@ -80,8 +80,8 @@ contrasts <- makeContrasts(
 # Apply contrasts and get results
 dds <- estimateDisp(dds, design)
 fit <- glmQLFit(dds, design)
-res_list <- lapply(contrasts, function(cntrst) {
-  res <- glmQLFTest(fit, contrast = cntrst)
+res_list <- lapply(colnames(contrasts), function(cntrst) {
+  res <- glmQLFTest(fit, contrast = contrasts[,cntrst])
   return(topTags(res, n = Inf))
 })
 
@@ -112,14 +112,17 @@ ggsave(filename = "edger_output/PCA_plot.png", plot = p)
 
 # Plot histograms
 for (i in 1:length(res_list)) {
-  p <- ggplot(res_list[[i]], aes(x = logFC)) + geom_histogram(bins = 50) + theme_bw() + xlab("log2 Fold Change")
+  res_df <- as.data.frame(res_list[[i]])  # Convert TopTags object to a data frame
+  p <- ggplot(res_df, aes(x = logFC)) + geom_histogram(bins = 50) + theme_bw() + xlab("log2 Fold Change")
   ggsave(filename = paste0("edger_output/", names(res_list[i]), "_histogram.png"), plot = p)
 }
 
+
 # Plot volcano plots
 for (i in 1:length(res_list)) {
-  p <- EnhancedVolcano(res_list[[i]],
-                       lab = rownames(res_list[[i]]),
+  table_df <- res_list[[i]]@.Data[[1]]  # Access the data frame in the 'table' slot
+  p <- EnhancedVolcano(table_df,
+                       lab = rownames(table_df),
                        x = 'logFC',
                        y = 'PValue',
                        title = names(res_list[i]),
@@ -128,11 +131,20 @@ for (i in 1:length(res_list)) {
   ggsave(filename = paste0("edger_output/", names(res_list[i]), "_volcano.png"), plot = p)
 }
 
+
+
+##################
+
 # Enhanced MA plots
 for (i in 1:length(res_list)) {
-  p <- plotSmear(res_list[[i]], de.tags = rownames(res_list[[i]][abs(res_list[[i]]$logFC) > lfc_threshold & res_list[[i]]$PValue < pvalue_threshold])) + geom_hline(yintercept = lfc_threshold, col = "red") + geom_hline(yintercept = -lfc_threshold, col = "red")
-  ggsave(filename = paste0("edger_output/", names(res_list[i]), "_MA_plot.png"), plot = p)
+  contrast_name <- names(res_list)[i]
+  res <- glmQLFTest(fit, contrast = contrasts[, contrast_name])
+  p <- plotSmear(res, de.tags = topTags(res, n = Inf)[abs(res$table$logFC) > lfc_threshold & res$table$PValue < pvalue_threshold, 1])
+  p <- p + geom_hline(yintercept = lfc_threshold, col = "red") 
+  p <- p + geom_hline(yintercept = -lfc_threshold, col = "red")
+  ggsave(filename = paste0("edger_output/", contrast_name, "_MA_plot.png"), plot = p)
 }
+
 
 # Create a heatmap
 # Subset the dds data by removing genes that have an average log CPM less than the threshold.
