@@ -27,9 +27,9 @@ library(gplots)
 
 
 # Set fold-change and p-value thresholds
-lfc_threshold <- log2(4)  # Convert fold-change threshold to log2 scale
-pvalue_threshold <- 0.00001
-cpm_threshold <- log2(2)  # Convert counts per million (CPM) threshold to log2 scale
+lfc_threshold <- 4  
+pvalue_threshold <- 0.001
+cpm_threshold <- 2
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
