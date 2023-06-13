@@ -127,7 +127,9 @@ for (i in 1:length(res_list)) {
                        y = 'PValue',
                        title = names(res_list[i]),
                        pCutoff = pvalue_threshold,
-                       FCcutoff = lfc_threshold)
+                       FCcutoff = lfc_threshold,
+                       pointSize = 1.8,
+                       labSize = 2.7)
   ggsave(filename = paste0("edger_output/", names(res_list[i]), "_volcano.png"), plot = p)
 }
 
