@@ -24,6 +24,7 @@ library(scales) # needed for oob parameter
 library(viridis)
 library(reshape2)
 library(gplots)
+library(ggrepel)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -129,6 +130,7 @@ pcaData <- plotPCA(vsd, intgroup = c("Tissue", "Injection", "Feeding"), returnDa
 percentVar <- round(100 * attr(pcaData, "percentVar"))
 pca_plot <- ggplot(pcaData, aes(PC1, PC2, color = Tissue, shape = Injection)) +
   geom_point(size = 3) +
+  geom_text_repel(aes(label = rownames(pcaData)), size = 1.8, max.overlaps = 20) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
   coord_fixed()
