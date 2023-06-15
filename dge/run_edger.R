@@ -102,13 +102,80 @@ for (i in 1:length(res_list)) {
   write.csv(res_list[[i]], file = paste0("edger_output/", names(res_list[i]), ".csv"))
 }
 
-# Plot PCA
+# Function to filter genes and save to file
+save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange_threshold, cpm_threshold) {
+  filtered <- topTags(res, n = Inf)
+  filtered <- subset(filtered, table$PValue < pvalue_threshold & abs(table$logFC) > foldchange_threshold & table$AveExpr > cpm_threshold)
+  
+  output_directory <- "edger_output"
+  output_filename <- paste0(output_directory, "/", contrast_name, "_filtered_genes.csv")
+  
+  # Extract the required columns
+  filtered_data <- data.frame(
+    Gene = row.names(filtered),
+    logFC = filtered$table$logFC,
+    PValue = filtered$table$PValue,
+    AveExpr = filtered$table$AveExpr
+  )
+  
+  # Print information for debugging
+  print(paste("Saving data for contrast:", contrast_name))
+  print(paste("Number of filtered genes:", nrow(filtered_data)))
+  print(paste("Output file:", output_filename))
+  
+  # Save the data frame as a .csv file
+  write.table(filtered_data, file = output_filename, sep = ",", col.names = TRUE, row.names = FALSE, quote = FALSE)
+  
+  # Return filtered data for further analysis
+  return(filtered_data)
+}
+
+# Apply contrasts, filter genes, and save to files
+filtered_res_list <- lapply(names(res_list), function(x) {
+  filtered_res <- save_filtered_genes(res_list[[x]], x, pvalue_threshold, log2(lfc_threshold), log(cpm_threshold+1))
+  return(filtered_res)
+})
+
+names(filtered_res_list) <- names(res_list)  # Naming the filtered results similar to original results
+
+# Finding common genes
+filtered_EO_saline_fooddep_vs_leptin_fooddep <- filtered_res_list[["EO_leptin_fooddep_vs_EO_saline_fooddep"]]
+filtered_SM_leptin_fooddep_vs_EO_leptin_fooddep <- filtered_res_list[["EO_leptin_fooddep_vs_SM_leptin_fooddep"]]
+
+common_genes <- intersect(filtered_EO_saline_fooddep_vs_leptin_fooddep$Gene, filtered_SM_leptin_fooddep_vs_EO_leptin_fooddep$Gene)
+write.table(common_genes, file = "edger_output/common_filtered_genes-EO_leptin_fooddep_vs_EO_saline_fooddep-EO_leptin_fooddep_vs_SM_leptin_fooddep.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
+
+# Calculate the logCPM values
 logCPM <- cpm(dds, log = TRUE)
-pca <- prcomp(t(logCPM))
-pca_df <- as.data.frame(pca$x)
-pca_df$condition <- metadata$condition
-p <- ggplot(pca_df, aes(PC1, PC2, color = condition)) + geom_point(size = 2) + theme_bw()
-ggsave(filename = "edger_output/PCA_plot.png", plot = p)
+
+# Perform PCA on the transposed logCPM values
+pcaData <- prcomp(t(logCPM))
+
+# Create a data frame from the PCA results
+pca_df <- as.data.frame(pcaData$x)
+
+# Include the experimental conditions in the data frame
+pca_df$Tissue <- metadata$Tissue
+pca_df$Injection <- metadata$Injection
+pca_df$Feeding <- metadata$Feeding
+
+# Calculate the percent variance explained by each principal component
+percentVar <- round(100 * (pcaData$sdev^2 / sum(pcaData$sdev^2)))
+
+# Plot the PCA with ggplot2
+pca_plot <- ggplot(pca_df, aes(PC1, PC2, color = Tissue, shape = Injection)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  coord_fixed()
+print(pca_plot)
+
+# Save the plot
+if (!dir.exists("edger_output")) dir.create("edger_output")
+ggsave("edger_output/pca_plot.png", plot = pca_plot)
+ggsave("edger_output/pca_plot.pdf", plot = pca_plot)
+
 
 # Plot histograms
 for (i in 1:length(res_list)) {
