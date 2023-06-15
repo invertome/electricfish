@@ -33,8 +33,8 @@ metadata$condition <- paste(metadata$Tissue, metadata$Injection, metadata$Feedin
 
 # Set fold-change and p-value thresholds
 foldchange_threshold <- 4
-pvalue_threshold <- 0.00001
-expression_threshold <- 2
+pvalue_threshold <- 0.001
+expression_threshold <- 10
 
 # Import Salmon output
 samples <- metadata$SampleID
