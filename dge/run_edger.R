@@ -105,7 +105,7 @@ for (i in 1:length(res_list)) {
 # Function to filter genes and save to file
 save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange_threshold, cpm_threshold) {
   filtered <- topTags(res, n = Inf)
-  filtered <- subset(filtered, table$PValue < pvalue_threshold & abs(table$logFC) > foldchange_threshold & table$AveExpr > cpm_threshold)
+  filtered <- subset(filtered, filtered$PValue < pvalue_threshold & abs(filtered$logFC) > foldchange_threshold & filtered$AveExpr > cpm_threshold)
   
   output_directory <- "edger_output"
   output_filename <- paste0(output_directory, "/", contrast_name, "_filtered_genes.csv")
@@ -113,9 +113,9 @@ save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange
   # Extract the required columns
   filtered_data <- data.frame(
     Gene = row.names(filtered),
-    logFC = filtered$table$logFC,
-    PValue = filtered$table$PValue,
-    AveExpr = filtered$table$AveExpr
+    logFC = filtered$logFC,
+    PValue = filtered$PValue,
+    AveExpr = filtered$AveExpr
   )
   
   # Print information for debugging
@@ -129,6 +129,7 @@ save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange
   # Return filtered data for further analysis
   return(filtered_data)
 }
+
 
 # Apply contrasts, filter genes, and save to files
 filtered_res_list <- lapply(names(res_list), function(x) {
