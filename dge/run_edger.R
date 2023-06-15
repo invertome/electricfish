@@ -29,7 +29,7 @@ library(gplots)
 # Set fold-change and p-value thresholds
 lfc_threshold <- 4  
 pvalue_threshold <- 0.001
-cpm_threshold <- 2
+cpm_threshold <- (log(10)+1)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -140,12 +140,31 @@ for (i in 1:length(res_list)) {
 # Enhanced MA plots
 for (i in 1:length(res_list)) {
   contrast_name <- names(res_list)[i]
-  res <- glmQLFTest(fit, contrast = contrasts[, contrast_name])
-  p <- plotSmear(res, de.tags = topTags(res, n = Inf)[abs(res$table$logFC) > lfc_threshold & res$table$PValue < pvalue_threshold, 1])
-  p <- p + geom_hline(yintercept = lfc_threshold, col = "red") 
-  p <- p + geom_hline(yintercept = -lfc_threshold, col = "red")
-  ggsave(filename = paste0("edger_output/", contrast_name, "_MA_plot.png"), plot = p)
+  res <- res_list[[i]]@.Data[[1]] # get the data frame from the 'table' slot
+#  res$baseMeanNew <- 1 / (10^log(res$logCPM + 1)) # compute baseMeanNew
+  enhanced_ma <- EnhancedVolcano(res,
+    lab = rownames(res),
+    title = paste0('MA plot: ', contrast_name),
+    x = 'logFC',
+    y = 'logCPM',
+    xlab = bquote(~Log[2]~ 'fold change'),
+    ylab = bquote(~Log[e]~ 'mean expression'),
+    xlim = c(-20, 20),
+    ylim = c(0, 5),
+    pCutoff = 0.01,
+    FCcutoff = lfc_threshold,
+    pointSize = 1.8,
+    labSize = 2.7,
+    legendLabels = c('NS', expression(Log[2]~FC),
+      'Mean expression', expression(Mean-expression~and~log[2]~FC)),
+    legendPosition = 'bottom',
+    legendLabSize = 16,
+    legendIconSize = 4.0) + coord_flip()
+  
+  ggsave(paste0("edger_output/enhanced_ma_", contrast_name, ".png"), plot = enhanced_ma)
+  ggsave(paste0("edger_output/enhanced_ma_", contrast_name, ".pdf"), plot = enhanced_ma)
 }
+
 
 
 # Create a heatmap
