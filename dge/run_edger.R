@@ -184,6 +184,17 @@ for (i in 1:length(res_list)) {
   ggsave(filename = paste0("edger_output/", names(res_list[i]), "_histogram.png"), plot = p)
 }
 
+# Add this new block of code after the 'Create and save histograms for each comparison.' comment
+# Create and save histograms of p-values for each comparison
+for (i in 1:length(res_list)) {
+  hist <- ggplot(data.frame(x=res_list[[i]]$table$PValue), aes(x)) +
+    geom_histogram(breaks = seq(0, 1, by = 0.05), col = "slateblue", fill = "skyblue") +
+    geom_vline(xintercept = c(0.05, 0.001), linetype = "dashed", color = "red") +
+    labs(title = paste0("Histogram of p-values (", names(res_list[i]), ")"), x = "p-value", y = "Count")
+  ggsave(paste0("edger_output/pvalue_histogram_", names(res_list[i]), ".png"), plot = hist)
+  ggsave(paste0("edger_output/pvalue_histogram_", names(res_list[i]), ".pdf"), plot = hist)
+}
+
 
 # Plot volcano plots
 for (i in 1:length(res_list)) {
@@ -200,9 +211,6 @@ for (i in 1:length(res_list)) {
   ggsave(filename = paste0("edger_output/", names(res_list[i]), "_volcano.png"), plot = p)
 }
 
-
-
-##################
 
 # Enhanced MA plots
 for (i in 1:length(res_list)) {
