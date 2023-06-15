@@ -191,4 +191,4 @@ heatmap.2(
 
 # Save the heatmap
 ggsave(filename = "edger_output/heatmap.png")
-
+ggsave(filename = "edger_output/heatmap.pdf")
