@@ -24,12 +24,14 @@ library(scales) # needed for oob parameter
 library(viridis)
 library(reshape2)
 library(gplots)
+library(dplyr)
 
 
 # Set fold-change and p-value thresholds
 lfc_threshold <- 4  
 pvalue_threshold <- 0.001
-cpm_threshold <- (log(10)+1)
+cpm_threshold <- 10
+log_cpm_threshold <- (log(cpm_threshold)+1)
 
 # Read metadata
 metadata <- read.csv("Sample_Metadata.csv", header = TRUE)
@@ -103,9 +105,42 @@ for (i in 1:length(res_list)) {
 }
 
 # Function to filter genes and save to file
-save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange_threshold, cpm_threshold) {
-  filtered <- topTags(res, n = Inf)
-  filtered <- subset(filtered, filtered$PValue < pvalue_threshold & abs(filtered$logFC) > foldchange_threshold & filtered$AveExpr > cpm_threshold)
+save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange_threshold) {
+  
+  res_data <- res@.Data[[1]] # get the data frame from the 'table' slot
+  
+  # Add debugging print statements
+  print(paste("Type of logFC: ", class(res_data$logFC)))
+
+  
+  # Check for non-numeric entries
+  non_numeric_entries <- which(!is.numeric(res_data$logFC))
+  if(length(non_numeric_entries) > 0) {
+    print(paste("Non-numeric entries found at indices: ", non_numeric_entries))
+    print("Values:")
+    print(res_data$logFC[non_numeric_entries])
+  }
+  
+  # Check for NA values
+  na_entries <- which(is.na(res_data$logFC))
+  if(length(na_entries) > 0) {
+    print(paste("NA entries found at indices: ", na_entries))
+    print("Values:")
+    print(res_data$logFC[na_entries])
+    # Replace NA values with 0
+    res_data$logFC[na_entries] <- 0
+  }
+  
+  # Check for non-finite values (Inf and -Inf)
+  non_finite_entries <- which(!is.finite(res_data$logFC))
+  if(length(non_finite_entries) > 0) {
+    print(paste("Non-finite entries found at indices: ", non_finite_entries))
+    # Replace non-finite values with 0
+    res_data$logFC[non_finite_entries] <- 0
+  }
+  
+  # Use dplyr::filter for more explicit NA handling
+  filtered <- dplyr::filter(res_data, PValue < pvalue_threshold & abs(logFC) > foldchange_threshold)
   
   output_directory <- "edger_output"
   output_filename <- paste0(output_directory, "/", contrast_name, "_filtered_genes.csv")
@@ -114,8 +149,7 @@ save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange
   filtered_data <- data.frame(
     Gene = row.names(filtered),
     logFC = filtered$logFC,
-    PValue = filtered$PValue,
-    AveExpr = filtered$AveExpr
+    PValue = filtered$PValue
   )
   
   # Print information for debugging
@@ -133,7 +167,7 @@ save_filtered_genes <- function(res, contrast_name, pvalue_threshold, foldchange
 
 # Apply contrasts, filter genes, and save to files
 filtered_res_list <- lapply(names(res_list), function(x) {
-  filtered_res <- save_filtered_genes(res_list[[x]], x, pvalue_threshold, log2(lfc_threshold), log(cpm_threshold+1))
+  filtered_res <- save_filtered_genes(res_list[[x]], x, pvalue_threshold, lfc_threshold)
   return(filtered_res)
 })
 
