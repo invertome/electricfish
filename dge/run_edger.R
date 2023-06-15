@@ -183,6 +183,10 @@ common_genes <- intersect(filtered_EO_saline_fooddep_vs_leptin_fooddep$Gene, fil
 write.table(common_genes, file = "edger_output/common_filtered_genes-EO_leptin_fooddep_vs_EO_saline_fooddep-EO_leptin_fooddep_vs_SM_leptin_fooddep.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
 
 
+# Finding all unique genes across all contrasts
+all_genes <- Reduce(union, lapply(filtered_res_list, function(x) x$Gene))
+write.table(all_genes, file = "edger_output/all_filtered_genes_all_contrasts.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
+
 # Calculate the logCPM values
 logCPM <- cpm(dds, log = TRUE)
 
