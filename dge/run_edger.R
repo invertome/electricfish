@@ -25,6 +25,8 @@ library(viridis)
 library(reshape2)
 library(gplots)
 library(dplyr)
+library(ggrepel)
+
 
 
 # Set fold-change and p-value thresholds
@@ -194,6 +196,7 @@ pca_df <- as.data.frame(pcaData$x)
 pca_df$Tissue <- metadata$Tissue
 pca_df$Injection <- metadata$Injection
 pca_df$Feeding <- metadata$Feeding
+pca_df$SampleName <- metadata$SampleID
 
 # Calculate the percent variance explained by each principal component
 percentVar <- round(100 * (pcaData$sdev^2 / sum(pcaData$sdev^2)))
@@ -201,6 +204,7 @@ percentVar <- round(100 * (pcaData$sdev^2 / sum(pcaData$sdev^2)))
 # Plot the PCA with ggplot2
 pca_plot <- ggplot(pca_df, aes(PC1, PC2, color = Tissue, shape = Injection)) +
   geom_point(size = 3) +
+  geom_text_repel(aes(label = SampleName), size = 1.8, max.overlaps = 10) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
   coord_fixed()
