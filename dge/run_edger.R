@@ -173,22 +173,35 @@ keep <- rowMeans(cpm(dds) > cpm_threshold) >= 0.5
 dds_subset <- dds[keep,]
 logCPM <- cpm(dds_subset, log = TRUE)
 
-# Do a hierarchical clustering of the genes and samples.
 hc_gene <- hclust(dist(logCPM), method = "average")
 hc_sample <- hclust(dist(t(logCPM)), method = "average")
 
-# Draw the heatmap.
+# PNG Output
+png(filename = "edger_output/heatmap.png")
 heatmap.2(
   as.matrix(logCPM),
   Rowv = as.dendrogram(hc_gene),
+  labRow = FALSE,
   Colv = as.dendrogram(hc_sample),
   scale = "none",
   col = viridis(256),
   trace = "none",
-  dendrogram = "row",
+  dendrogram = "column",
   margin = c(12, 12)
 )
+dev.off()
 
-# Save the heatmap
-ggsave(filename = "edger_output/heatmap.png")
-ggsave(filename = "edger_output/heatmap.pdf")
+# PDF Output
+pdf(file = "edger_output/heatmap.pdf")
+heatmap.2(
+  as.matrix(logCPM),
+  Rowv = as.dendrogram(hc_gene),
+  labRow = FALSE,
+  Colv = as.dendrogram(hc_sample),
+  scale = "none",
+  col = viridis(256),
+  trace = "none",
+  dendrogram = "column",
+  margin = c(12, 12)
+)
+dev.off()
