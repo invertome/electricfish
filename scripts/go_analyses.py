@@ -125,7 +125,7 @@ if __name__ == '__main__':
     get_gene_info_file(args.taxid, gene_info_gz, ref_dir)
 
     # Load gene_info into a DataFrame
-    gene_info_df = pd.read_csv(os.path.join(ref_dir, f'{taxonomy_id_to_organism.get(args.taxid, "Other")}.gene_info'), sep='\t', index_col='GeneID')
+    gene_info_df = pd.read_csv(os.path.join(ref_dir, f'{taxid_to_organism.get(args.taxid, "Other")}.gene_info'), sep='\t', index_col='GeneID')
 
     # Get the gene_info file
 
