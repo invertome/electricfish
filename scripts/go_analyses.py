@@ -28,16 +28,13 @@ def run_enrichr(gene_list, gene_sets, organism, output_dir):
     return enrichr(gene_list=gene_list, gene_sets=gene_sets, organism=organism, outdir=output_dir)
 
 # Function to convert NCBI ID to Entrez ID
-def ncbi_to_entrez(ncbi_id):
-    Entrez.email = "your.email@example.com"  # Please update this to your own email
-    link_result = Entrez.elink(dbfrom="protein", db="gene", id=ncbi_id)
-    record = Entrez.read(link_result)
-    link_result.close()
+def ncbi_to_entrez(ncbi_id, gene_info_df):
     try:
-        entrez_id = record[0]["LinkSetDb"][0]["Link"][0]["Id"]
-    except IndexError:
+        entrez_id = gene_info_df.loc[ncbi_id, 'GeneID']
+    except KeyError:
         entrez_id = None
     return entrez_id
+
 
 # Function to plot KEGG pathway
 def plot_pathway(kegg_id, output_dir):
@@ -54,6 +51,40 @@ def extract_blast_hit_ids(blast_results_file):
 
     # Return hit IDs as a list
     return hit_ids.tolist()
+    
+# Function to download and extract gene_info file
+# Define the mapping outside the function
+taxid_to_organism = {
+    9606: 'Homo_sapiens',
+    10090: 'Mus_musculus',
+    7955: 'Danio_rerio',
+    7227: 'Drosophila_melanogaster',
+    # Add more if needed
+}
+
+taxid_to_path = {
+    9606: 'Mammalia/Homo_sapiens.gene_info.gz',
+    10090: 'Mammalia/Mus_musculus.gene_info.gz',
+    7955: 'Non-mammalian_vertebrates/Danio_rerio.gene_info.gz',
+    7227: 'Invertebrates/Drosophila_melanogaster.gene_info.gz',
+    # Add more if needed
+}
+
+def get_gene_info_file(taxid, gene_info_gz, output_dir):
+    os.makedirs(output_dir, exist_ok=True)  
+    if not os.path.exists(gene_info_gz):
+        logger.info('Downloading gene_info.gz...')
+        path = taxid_to_path.get(taxid, 'Invertebrates/All_Invertebrates.gene_info.gz')  # use a default path if taxid is not in the dictionary
+        os.system(f'wget ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/{path} -O {gene_info_gz}')
+    if not os.path.exists(os.path.join(output_dir, f'{organism}.gene_info')):
+        logger.info('Extracting gene_info.gz...')
+        with gzip.open(gene_info_gz, 'rb') as f_in:
+            with open(os.path.join(output_dir, f'{organism}.gene_info'), 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+    logger.info('Gene_info file is ready.')
+
+
+
 
 
 if __name__ == '__main__':
@@ -68,6 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--blast_results', type=str, help='Path to BLAST results file')
     parser.add_argument('-kegg', action='store_true', help='Conduct KEGG pathway enrichment analysis')
     parser.add_argument('--plot_pathway', type=str, help='KEGG pathway ID to plot')
+    parser.add_argument('--ref_dir', type=str, required=True, help='Reference files directory')
     args = parser.parse_args()
 
 
@@ -79,6 +111,27 @@ if __name__ == '__main__':
 
     # Start logging
     logger.info('Script started.')
+
+
+    # Define the reference files paths
+    ref_dir = args.ref_dir
+    go_obo = os.path.join(ref_dir, "go-basic.obo")
+    gene2go = os.path.join(ref_dir, "gene2go.gz")
+
+    organism = taxid_to_organism.get(args.taxid, 'Other')
+    gene_info_gz = os.path.join(ref_dir, f"{organism}.gene_info.gz")
+
+    # Get the gene_info file
+    get_gene_info_file(args.taxid, gene_info_gz, ref_dir)
+
+    # Load gene_info into a DataFrame
+    gene_info_df = pd.read_csv(os.path.join(ref_dir, f'{taxonomy_id_to_organism.get(args.taxid, "Other")}.gene_info'), sep='\t', index_col='GeneID')
+
+    # Get the gene_info file
+
+    # Modify the following code lines to use gene_info_df
+    gene_entrez = [ncbi_to_entrez(id, gene_info_df) for id in gene_ncbi if ncbi_to_entrez(id, gene_info_df) is not None]
+
 
     # Download necessary files if they don't exist
     go_obo = os.path.join(args.o, "go-basic.obo")
