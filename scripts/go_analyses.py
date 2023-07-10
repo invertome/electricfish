@@ -86,7 +86,9 @@ if __name__ == '__main__':
 
     # Extract hit IDs from BLAST results file if provided and no other background file is given
     if args.blast_results and not args.background:
-        args.background = extract_blast_hit_ids(args.blast_results)
+        hit_ids = extract_blast_hit_ids(args.blast_results)
+        geneid2gos_species = {gene_id: go_terms for gene_id, go_terms in geneid2gos_species.items() if gene_id in hit_ids}
+
 
     # For each input file
     for input_file in args.i:
