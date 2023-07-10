@@ -9,7 +9,7 @@ from goatools.anno.genetogo_reader import Gene2GoReader
 from goatools.goea.go_enrichment_ns import GOEnrichmentStudyNS
 from gseapy import enrichr, barplot
 from gseapy.plot import gseaplot
-from Bio import KEGG
+from Bio import KEGG, Entrez
 from Bio.KEGG.KGML import KGML_parser
 
 # Set up logging
@@ -18,11 +18,26 @@ logger = logging.getLogger(__name__)
 
 # Function to read gene to GO term associations
 def read_ncbi_gene2go(gene2go, taxids, **kws):
-    return Gene2GoReader(gene2go, taxids=taxids, **kws).get_id2gos(namespace='BP')
+    id2gos = Gene2GoReader(gene2go, taxids=taxids, **kws).get_id2gos(namespace='BP')
+    id2gos = {ncbi_to_entrez(ncbi_id): go_terms for ncbi_id, go_terms in id2gos.items() if ncbi_to_entrez(ncbi_id) is not None}
+    return id2gos
 
-# Function to run Enrichr for gene list
-def run_enrichr(gene_list, description, gene_sets, taxid, output_dir):
-    return enrichr(gene_list=gene_list, description=description, gene_sets=gene_sets, organism=str(taxid), outdir=output_dir)
+
+def run_enrichr(gene_list, gene_sets, organism, output_dir):
+    # Run Enrichr
+    return enrichr(gene_list=gene_list, gene_sets=gene_sets, organism=organism, outdir=output_dir)
+
+# Function to convert NCBI ID to Entrez ID
+def ncbi_to_entrez(ncbi_id):
+    Entrez.email = "your.email@example.com"  # Please update this to your own email
+    link_result = Entrez.elink(dbfrom="protein", db="gene", id=ncbi_id)
+    record = Entrez.read(link_result)
+    link_result.close()
+    try:
+        entrez_id = record[0]["LinkSetDb"][0]["Link"][0]["Id"]
+    except IndexError:
+        entrez_id = None
+    return entrez_id
 
 # Function to plot KEGG pathway
 def plot_pathway(kegg_id, output_dir):
@@ -40,6 +55,7 @@ def extract_blast_hit_ids(blast_results_file):
     # Return hit IDs as a list
     return hit_ids.tolist()
 
+
 if __name__ == '__main__':
     # Handle argument parsing
     parser = argparse.ArgumentParser()
@@ -53,6 +69,7 @@ if __name__ == '__main__':
     parser.add_argument('-kegg', action='store_true', help='Conduct KEGG pathway enrichment analysis')
     parser.add_argument('--plot_pathway', type=str, help='KEGG pathway ID to plot')
     args = parser.parse_args()
+
 
     # Create the output directory if it doesn't exist
     os.makedirs(args.o, exist_ok=True)
@@ -75,6 +92,24 @@ if __name__ == '__main__':
     obodag = GODag(go_obo)
     logger.info('GO DAG loaded.')
 
+
+    # Mapping NCBI Taxonomy IDs to Enrichr organism names
+    taxonomy_id_to_organism = {
+        9606: 'Human',
+        10090: 'Mouse',
+        10116: 'Rat',
+        7227: 'Fly',
+        6239: 'Worm',
+        7955: 'Fish',
+        4932: 'Yeast',
+        9986: 'Rabbit',
+        # Add more if needed
+    }
+    
+    # Convert the taxid from an integer to a string for Enrichr
+    enrichr_organism = taxonomy_id_to_organism.get(args.taxid, 'Other')
+
+    
     # Read gene to GO term associations
     # Unzip the gzipped file
     with gzip.open(gene2go, 'rb') as f_in:
@@ -89,7 +124,6 @@ if __name__ == '__main__':
         hit_ids = extract_blast_hit_ids(args.blast_results)
         geneid2gos_species = {gene_id: go_terms for gene_id, go_terms in geneid2gos_species.items() if gene_id in hit_ids}
 
-
     # For each input file
     for input_file in args.i:
         # Read the CSV file
@@ -100,9 +134,12 @@ if __name__ == '__main__':
         # Create a list of gene NCBI IDs
         gene_ncbi = df['ProteinID'].tolist()
 
+        # Convert NCBI IDs to Entrez IDs
+        gene_entrez = [ncbi_to_entrez(id) for id in gene_ncbi if ncbi_to_entrez(id) is not None]
+
         # Conduct GO enrichment analysis
         goeaobj = GOEnrichmentStudyNS(
-            gene_ncbi,
+            gene_entrez,
             geneid2gos_species,
             obodag,
             propagate_counts=False,
@@ -120,7 +157,7 @@ if __name__ == '__main__':
         # Conduct KEGG analysis if specified
         if args.kegg:
             logger.info('Running KEGG pathway enrichment analysis...')
-            enr_res = run_enrichr(gene_list=gene_ncbi, description='pathway', gene_sets='KEGG_Pathways', taxid=args.taxid, output_dir=args.o)
+            enr_res = run_enrichr(gene_list=gene_ncbi, gene_sets='KEGG_2016', organism=enrichr_organism, output_dir=args.o)
             enr_res.res2d.to_csv(os.path.join(args.o, 'KEGG_enrichment.csv'))
 
             # Plot KEGG pathway enrichment
@@ -133,3 +170,4 @@ if __name__ == '__main__':
             logger.info(f'KEGG pathway {args.plot_pathway} plotted.')
 
     logger.info('Script finished.')
+
