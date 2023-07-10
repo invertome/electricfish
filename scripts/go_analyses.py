@@ -17,11 +17,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Function to read gene to GO term associations
-def read_ncbi_gene2go(gene2go, taxids, **kws):
+def read_ncbi_gene2go(gene2go, taxids, gene_info_df, **kws):
     id2gos = Gene2GoReader(gene2go, taxids=taxids, **kws).get_id2gos(namespace='BP')
-    id2gos = {ncbi_to_entrez(ncbi_id): go_terms for ncbi_id, go_terms in id2gos.items() if ncbi_to_entrez(ncbi_id) is not None}
+    id2gos = {ncbi_to_entrez(ncbi_id, gene_info_df): go_terms for ncbi_id, go_terms in id2gos.items() if ncbi_to_entrez(ncbi_id, gene_info_df) is not None}
     return id2gos
-
 
 def run_enrichr(gene_list, gene_sets, organism, output_dir):
     # Run Enrichr
@@ -129,10 +128,6 @@ if __name__ == '__main__':
 
     # Get the gene_info file
 
-    # Modify the following code lines to use gene_info_df
-    gene_entrez = [ncbi_to_entrez(id, gene_info_df) for id in gene_ncbi if ncbi_to_entrez(id, gene_info_df) is not None]
-
-
     # Download necessary files if they don't exist
     go_obo = os.path.join(args.o, "go-basic.obo")
     gene2go = os.path.join(args.o, "gene2go.gz")
@@ -169,7 +164,7 @@ if __name__ == '__main__':
         with open(gene2go[:-3], 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-    geneid2gos_species = read_ncbi_gene2go(gene2go[:-3], taxids=[args.taxid])
+    geneid2gos_species = read_ncbi_gene2go(gene2go[:-3], taxids=[args.taxid], gene_info_df=gene_info_df)
     logger.info('Gene to GO term associations read.')
 
     # Extract hit IDs from BLAST results file if provided and no other background file is given
@@ -178,6 +173,7 @@ if __name__ == '__main__':
         geneid2gos_species = {gene_id: go_terms for gene_id, go_terms in geneid2gos_species.items() if gene_id in hit_ids}
 
     # For each input file
+# For each input file
     for input_file in args.i:
         # Read the CSV file
         df = pd.read_csv(input_file)
@@ -188,7 +184,8 @@ if __name__ == '__main__':
         gene_ncbi = df['ProteinID'].tolist()
 
         # Convert NCBI IDs to Entrez IDs
-        gene_entrez = [ncbi_to_entrez(id) for id in gene_ncbi if ncbi_to_entrez(id) is not None]
+        gene_entrez = [ncbi_to_entrez(id, gene_info_df) for id in gene_ncbi if ncbi_to_entrez(id, gene_info_df) is not None]
+
 
         # Conduct GO enrichment analysis
         goeaobj = GOEnrichmentStudyNS(
