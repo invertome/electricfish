@@ -2,6 +2,8 @@ import os
 import argparse
 import pandas as pd
 import logging
+import gzip
+import shutil
 from goatools.obo_parser import GODag
 from goatools.anno.genetogo_reader import Gene2GoReader
 from goatools.goea.go_enrichment_ns import GOEnrichmentStudyNS
@@ -74,7 +76,12 @@ if __name__ == '__main__':
     logger.info('GO DAG loaded.')
 
     # Read gene to GO term associations
-    geneid2gos_species = read_ncbi_gene2go(gene2go, taxids=[args.taxid])
+    # Unzip the gzipped file
+    with gzip.open(gene2go, 'rb') as f_in:
+        with open(gene2go[:-3], 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+
+    geneid2gos_species = read_ncbi_gene2go(gene2go[:-3], taxids=[args.taxid])
     logger.info('Gene to GO term associations read.')
 
     # Extract hit IDs from BLAST results file if provided and no other background file is given
