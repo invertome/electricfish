@@ -151,7 +151,7 @@ if __name__ == '__main__':
     print(gene_info_df.head())
     
     # Get the gene2refseq file
-    gene2refseq_gz = os.path.join(ref_dir, "gene2refseq.gz")
+    gene2refseq_gz = os.path.join(ref_dir, "gene2accession.gz")
     get_gene2refseq_file(gene2refseq_gz, ref_dir)
     # Load gene2refseq into a DataFrame
     gene2refseq_df = pd.read_csv(os.path.join(ref_dir, 'gene2refseq'), sep='\t', index_col='ProteinID')
