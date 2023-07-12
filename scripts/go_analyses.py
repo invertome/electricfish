@@ -26,13 +26,27 @@ def run_enrichr(gene_list, gene_sets, organism, output_dir):
     # Run Enrichr
     return enrichr(gene_list=gene_list, gene_sets=gene_sets, organism=organism, outdir=output_dir)
 
-# Function to convert NCBI ID to Entrez ID
-def ncbi_to_entrez(ncbi_id, gene_info_df):
+# Function to download and process gene2refseq file
+def get_gene2refseq_file(refseq_file, output_dir):
+    os.makedirs(output_dir, exist_ok=True)  
+    if not os.path.exists(refseq_file):
+        logger.info('Downloading gene2refseq.gz...')
+        os.system(f'wget ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2refseq.gz -O {refseq_file}')
+    if not os.path.exists(os.path.join(output_dir, 'gene2refseq')):
+        logger.info('Extracting gene2refseq.gz...')
+        with gzip.open(refseq_file, 'rb') as f_in:
+            with open(os.path.join(output_dir, 'gene2refseq'), 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+    logger.info('gene2refseq file is ready.')
+
+# Function to convert ProteinID to GeneID using gene2refseq file
+def protein_to_gene(protein_id, gene2refseq_df):
     try:
-        entrez_id = gene_info_df.loc[ncbi_id, 'GeneID']
+        gene_id = gene2refseq_df.loc[protein_id, 'GeneID']
     except KeyError:
-        entrez_id = None
-    return entrez_id
+        gene_id = None
+    return gene_id
+
 
 
 # Function to plot KEGG pathway
@@ -135,10 +149,16 @@ if __name__ == '__main__':
 
     # After reading the gene_info_df DataFrame
     print(gene_info_df.head())
+    
+    # Get the gene2refseq file
+    gene2refseq_gz = os.path.join(ref_dir, "gene2refseq.gz")
+    get_gene2refseq_file(gene2refseq_gz, ref_dir)
+    # Load gene2refseq into a DataFrame
+    gene2refseq_df = pd.read_csv(os.path.join(ref_dir, 'gene2refseq'), sep='\t', index_col='ProteinID')
 
     # Convert a test ProteinID to a GeneID
     test_protein_id = 'XP_001920640.3'  
-    print(ncbi_to_entrez(test_protein_id, gene_info_df))
+    print(protein_to_gene(test_protein_id, gene2refseq_df))
 
 
     # Load the GO DAG
@@ -188,8 +208,7 @@ if __name__ == '__main__':
         gene_ncbi = df['ProteinID'].tolist()
 
         # Convert NCBI IDs to Entrez IDs
-        gene_entrez = [ncbi_to_entrez(id, gene_info_df) for id in gene_ncbi if ncbi_to_entrez(id, gene_info_df) is not None]
-
+        gene_entrez = [protein_to_gene(id, gene2refseq_df) for id in gene_ncbi if protein_to_gene(id, gene2refseq_df) is not None]
 
         # Conduct GO enrichment analysis
         goeaobj = GOEnrichmentStudyNS(
