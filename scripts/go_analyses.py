@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Function to read gene to GO term associations
 def read_ncbi_gene2go(gene2go, taxids, gene_info_df, **kws):
     id2gos = Gene2GoReader(gene2go, taxids=taxids, **kws).get_id2gos(namespace='BP')
-    id2gos = {ncbi_to_entrez(ncbi_id, gene_info_df): go_terms for ncbi_id, go_terms in id2gos.items() if ncbi_to_entrez(ncbi_id, gene_info_df) is not None}
+    id2gos = {ncbi_id: go_terms for ncbi_id, go_terms in id2gos.items() if ncbi_id in gene_info_df.index}
     return id2gos
 
 def run_enrichr(gene_list, gene_sets, organism, output_dir):
@@ -41,15 +41,18 @@ def plot_pathway(kegg_id, output_dir):
     KEGG.draw(pathway, filename=os.path.join(output_dir, f'{kegg_id}_pathway.png'))
 
 # Function to extract hit IDs from BLAST results
-def extract_blast_hit_ids(blast_results_file):
+def extract_blast_hit_ids(blast_results_file, gene_info_df):
     # Load the BLAST results into a DataFrame
     blast_results = pd.read_csv(blast_results_file, sep="\t", header=None)
 
     # Extract the hit IDs from the second column
     hit_ids = blast_results[1].unique()
 
+    # Convert the hit IDs from NCBI IDs to Entrez IDs
+    hit_ids = [ncbi_id for ncbi_id in hit_ids if ncbi_id in gene_info_df.index]
+
     # Return hit IDs as a list
-    return hit_ids.tolist()
+    return hit_ids
     
 # Function to download and extract gene_info file
 # Define the mapping outside the function
@@ -116,6 +119,10 @@ if __name__ == '__main__':
     ref_dir = args.ref_dir
     go_obo = os.path.join(ref_dir, "go-basic.obo")
     gene2go = os.path.join(ref_dir, "gene2go.gz")
+    if not os.path.exists(go_obo):
+        os.system(f'wget http://purl.obolibrary.org/obo/go/go-basic.obo -O {go_obo}')
+    if not os.path.exists(gene2go):
+        os.system(f'wget ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2go.gz -O {gene2go}')
 
     organism = taxid_to_organism.get(args.taxid, 'Other')
     gene_info_gz = os.path.join(ref_dir, f"{organism}.gene_info.gz")
@@ -126,15 +133,13 @@ if __name__ == '__main__':
     # Load gene_info into a DataFrame
     gene_info_df = pd.read_csv(os.path.join(ref_dir, f'{taxid_to_organism.get(args.taxid, "Other")}.gene_info'), sep='\t', index_col='GeneID')
 
-    # Get the gene_info file
+    # After reading the gene_info_df DataFrame
+    print(gene_info_df.head())
 
-    # Download necessary files if they don't exist
-    go_obo = os.path.join(args.o, "go-basic.obo")
-    gene2go = os.path.join(args.o, "gene2go.gz")
-    if not os.path.exists(go_obo):
-        os.system(f'wget http://purl.obolibrary.org/obo/go/go-basic.obo -O {go_obo}')
-    if not os.path.exists(gene2go):
-        os.system(f'wget ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2go.gz -O {gene2go}')
+    # Convert a test ProteinID to a GeneID
+    test_protein_id = 'XP_001920640.3'  
+    print(ncbi_to_entrez(test_protein_id, gene_info_df))
+
 
     # Load the GO DAG
     obodag = GODag(go_obo)
@@ -169,11 +174,10 @@ if __name__ == '__main__':
 
     # Extract hit IDs from BLAST results file if provided and no other background file is given
     if args.blast_results and not args.background:
-        hit_ids = extract_blast_hit_ids(args.blast_results)
+        hit_ids = extract_blast_hit_ids(args.blast_results, gene_info_df)
         geneid2gos_species = {gene_id: go_terms for gene_id, go_terms in geneid2gos_species.items() if gene_id in hit_ids}
 
     # For each input file
-# For each input file
     for input_file in args.i:
         # Read the CSV file
         df = pd.read_csv(input_file)
@@ -197,12 +201,29 @@ if __name__ == '__main__':
             methods=[args.method]
         )
 
+        # Print for debugging
+        print("gene_entrez: ", gene_entrez)
+        print("geneid2gos_species: ", geneid2gos_species)
+        print("Number of entries in geneid2gos_species: ", len(geneid2gos_species))
+        #print("obodag: ", obodag)
+
         goea_results_all = goeaobj.run_study(gene_ncbi)
+
+        # Print the total number of enrichment results
+        print("Total number of enrichment results: ", len(goea_results_all))
+
         goea_results_sig = [r for r in goea_results_all if getattr(r, 'p_' + args.method) < args.alpha]
 
+        # Print the number of significant results
+        print("Number of significant results: ", len(goea_results_sig))
+
         # Save significant results as a CSV
-        goeaobj.wr_tsv(os.path.join(args.o, f'{os.path.basename(input_file).split(".")[0]}_goea_significant.tsv'), goea_results_sig)
-        logger.info(f'Significant results saved for file {input_file}.')
+        if len(goea_results_sig) > 0:
+            goeaobj.wr_tsv(os.path.join(args.o, f'{os.path.basename(input_file).split(".")[0]}_goea_significant.tsv'), goea_results_sig)
+            logger.info(f'Significant results saved for file {input_file}.')
+        else:
+            logger.warning(f'No significant results for file {input_file}.')
+
 
         # Conduct KEGG analysis if specified
         if args.kegg:
