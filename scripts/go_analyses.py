@@ -154,7 +154,7 @@ if __name__ == '__main__':
     gene2refseq_gz = os.path.join(ref_dir, "gene2accession.gz")
     get_gene2refseq_file(gene2refseq_gz, ref_dir)
     # Load gene2refseq into a DataFrame
-    gene2refseq_df = pd.read_csv(os.path.join(ref_dir, 'gene2refseq'), sep='\t', index_col='ProteinID')
+    gene2refseq_df = pd.read_csv(os.path.join(ref_dir, 'gene2refseq'), sep='\t', index_col='protein_accession.version')
 
     # Convert a test ProteinID to a GeneID
     test_protein_id = 'XP_001920640.3'  
