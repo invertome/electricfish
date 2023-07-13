@@ -127,19 +127,25 @@ filtered_SM_leptin_fooddep_vs_EO_leptin_fooddep <- filtered_res_list[["EO_leptin
 common_genes <- intersect(filtered_EO_saline_fooddep_vs_leptin_fooddep$Gene, filtered_SM_leptin_fooddep_vs_EO_leptin_fooddep$Gene)
 write.table(common_genes, file = "deseq2_output/common_filtered_genes-EO_leptin_fooddep_vs_EO_saline_fooddep-EO_leptin_fooddep_vs_SM_leptin_fooddep.txt", col.names = FALSE, row.names = FALSE, quote = FALSE)
 
-# PCA plot (note that this is not specific to a contrast, so is only done once)
+# PCA plot
 vsd <- vst(dds, blind = FALSE)
 pcaData <- plotPCA(vsd, intgroup = c("Tissue", "Injection", "Feeding"), returnData = TRUE)
 percentVar <- round(100 * attr(pcaData, "percentVar"))
-pca_plot <- ggplot(pcaData, aes(PC1, PC2, color = Tissue, shape = Injection)) +
+
+pca_plot <- ggplot(pcaData, aes(PC1, PC2, color = Tissue, shape = Injection, fill = Feeding)) +
   geom_point(size = 3) +
+  scale_shape_manual(values = c(21, 24)) +
+  scale_fill_manual(values = c("adlib" = "black", "fooddep" = NA)) +
   geom_text_repel(aes(label = rownames(pcaData)), size = 1.8, max.overlaps = 20) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
-  coord_fixed()
+  coord_fixed() +
+  guides(fill = guide_legend(override.aes = list(shape = 21, color = c("black", "black"), fill = c("black", "white"))))  # Manually define legend aesthetics
+
 print(pca_plot)
 ggsave("deseq2_output/pca_plot.png", plot = pca_plot)
 ggsave("deseq2_output/pca_plot.pdf", plot = pca_plot)
+
 
 # Histograms, volcano plots, MA plots
 for (contrast_name in names(res_list)) {
