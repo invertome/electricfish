@@ -155,7 +155,7 @@ for (contrast_name in names(res_list)) {
   # Histogram
   hist <- ggplot(data.frame(x=res$pvalue), aes(x)) +
     geom_histogram(breaks = seq(0, 1, by = 0.05), col = "slateblue", fill = "skyblue") +
-    geom_vline(xintercept = c(0.05, 0.001), linetype = "dashed", color = "red") +
+    geom_vline(xintercept = 0.05, linetype = "dashed", color = "blue") +
     labs(title = paste0("Histogram of p-values (", contrast_name, ")"), x = "p-value", y = "Count")
   ggsave(paste0("deseq2_output/histogram_", contrast_name, ".png"), plot = hist)
   ggsave(paste0("deseq2_output/histogram_", contrast_name, ".pdf"), plot = hist)
@@ -196,20 +196,57 @@ for (contrast_name in names(res_list)) {
 
   ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".png"), plot = enhanced_ma)
   ggsave(paste0("deseq2_output/enhanced_ma_", contrast_name, ".pdf"), plot = enhanced_ma)
+
+  # Heatmap
+  # Heatmap
+  tryCatch({
+    # Extract condition names from the contrast
+    cond1 <- strsplit(contrast_name, "_vs_")[[1]][1]
+    cond2 <- strsplit(contrast_name, "_vs_")[[1]][2]
   
-    # Filter genes that pass the logfoldchange and pvalue thresholds
-  filtered_genes <- rownames(subset(res, padj < pvalue_threshold & abs(log2FoldChange) > foldchange_threshold))
-
-  # Extract normalized counts
-  normalized_counts <- counts(dds, normalized=TRUE)
-
-  # Filter normalized counts for the filtered genes
-  filtered_normalized_counts <- normalized_counts[filtered_genes,]
-
-  # Z-scores and log-transformed counts for the filtered genes
-  filtered_log_transformed_counts <- log2(filtered_normalized_counts + 1)
+    # Subset the samples for this contrast
+    samples_for_contrast <- colnames(assay(vsd)) %in% c(metadata[metadata$condition == cond1,]$SampleID, metadata[metadata$condition == cond2,]$SampleID)
   
-}
+    # Select genes with finite values only
+    select_genes <- rowSums(is.finite(assay(vsd)[select_genes, samples_for_contrast])) == length(samples_for_contrast)
+  
+    # Check that there are genes to plot
+    if (sum(select_genes) > 0) {
+      top_variance_genes <- head(order(rowVars(assay(vsd)[select_genes, samples_for_contrast]), decreasing = TRUE), 100)
+    
+      # Check that there are top variance genes to plot
+      if(length(top_variance_genes) > 0) {
+        heatmap_data <- assay(vsd)[top_variance_genes, samples_for_contrast]
+        rownames(heatmap_data) <- make.names(rownames(heatmap_data), unique = TRUE)
+      
+        heatmap_colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
+      
+        heatmap <- pheatmap(heatmap_data,
+                            color = heatmap_colors,
+                            show_rownames = FALSE,
+                            scale = "row",
+                            annotation_col = as.data.frame(colData(vsd)[samples_for_contrast, "condition"]),
+                            main = paste0("Heatmap for ", contrast_name))
+      
+        # Check if directory exists
+        if(!dir.exists("deseq2_output")) {
+          dir.create("deseq2_output")
+        }
+      
+        ggsave(paste0("deseq2_output/heatmap_", contrast_name, ".png"), plot = heatmap)
+        ggsave(paste0("deseq2_output/heatmap_", contrast_name, ".pdf"), plot = heatmap)
+      } else {
+        print(paste("No top variance genes found for contrast:", contrast_name))
+      }
+    } else {
+      print(paste("No genes selected for contrast:", contrast_name))
+    }
+  }, error=function(e){print(paste("Error in creating heatmap for contrast:", contrast_name, "Error:", e))})
+
+
+
+} 
+  
 
 
 # Apply contrasts, filter genes, and save to files
@@ -285,6 +322,24 @@ plot_heatmap <- function(counts_matrix, filename, title){
 plot_heatmap(filtered_log_transformed_counts, "filtered_heatmap_log2_transformed_all_contrasts", "Gene Expression Heatmap (log2)")
 plot_heatmap(filtered_log10_transformed_counts, "filtered_heatmap_log10_transformed_all_contrasts", "Gene Expression Heatmap (log10)")
 plot_heatmap(filtered_vst_transformed_counts, "filtered_heatmap_vst_transformed_all_contrasts", "Gene Expression Heatmap (VST)")
+                                  
+# We will use the top 100 genes with the highest variance across samples for the heatmap.
+# You can adjust this number according to your preference.
+top_variance_genes <- head(order(rowVars(assay(vsd)), decreasing = TRUE), 100)
+
+heatmap_data <- assay(vsd)[top_variance_genes, ]
+rownames(heatmap_data) <- make.names(rownames(heatmap_data), unique = TRUE)
+
+heatmap_colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
+
+heatmap <- pheatmap(heatmap_data,
+                    color = heatmap_colors,
+                    show_rownames = FALSE,
+                    scale = "row",
+                    annotation_col = as.data.frame(colData(vsd)[, "condition"]),
+                    main = paste0("VSD normalized Heatmap", contrast_name))
+ggsave(paste0("deseq2_output/heatmap_", "top100", ".png"), plot = heatmap)
+ggsave(paste0("deseq2_output/heatmap_", "top100", ".pdf"), plot = heatmap)
 
 
 
