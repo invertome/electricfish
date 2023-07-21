@@ -323,23 +323,37 @@ plot_heatmap(filtered_log_transformed_counts, "filtered_heatmap_log2_transformed
 plot_heatmap(filtered_log10_transformed_counts, "filtered_heatmap_log10_transformed_all_contrasts", "Gene Expression Heatmap (log10)")
 plot_heatmap(filtered_vst_transformed_counts, "filtered_heatmap_vst_transformed_all_contrasts", "Gene Expression Heatmap (VST)")
                                   
-# We will use the top 100 genes with the highest variance across samples for the heatmap.
+# Using the top 100 genes with the highest variance across samples for the heatmap.
 # You can adjust this number according to your preference.
-top_variance_genes <- head(order(rowVars(assay(vsd)), decreasing = TRUE), 100)
 
-heatmap_data <- assay(vsd)[top_variance_genes, ]
+# First, remove any rows with NA, Inf or -Inf values
+filtered_vsd <- assay(vsd)[!apply(is.na(assay(vsd)) | is.infinite(assay(vsd)), 1, any), ]
+
+# Calculate variance across samples for the filtered data
+top_variance_genes <- head(order(rowVars(filtered_vsd), decreasing = TRUE), 100)
+
+heatmap_data <- filtered_vsd[top_variance_genes, ]
 rownames(heatmap_data) <- make.names(rownames(heatmap_data), unique = TRUE)
 
-heatmap_colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
+heatmap_colors <- viridis(255)
+                                  
+# Make sure your colData has the required columns
+# 'Tissue', 'Injection', 'Feeding' and they have categories as mentioned.
+annotation <- as.data.frame(colData(vsd)[, c("Tissue", "Injection", "Feeding")])
+
+# Assign colors for the annotation
+annotation_colors <- list(Tissue = c(SM = "orange", EO = "skyblue"),
+                          Injection = c(leptin = "grey50", saline = "yellow"),
+                          Feeding = c(adlib = "palegreen4", fooddep = "mediumpurple1"))
+
 
 heatmap <- pheatmap(heatmap_data,
                     color = heatmap_colors,
                     show_rownames = FALSE,
                     scale = "row",
-                    annotation_col = as.data.frame(colData(vsd)[, "condition"]),
+                    annotation_col = annotation,
+                    annotation_colors = annotation_colors,
                     main = paste0("VSD normalized Heatmap", contrast_name))
+
 ggsave(paste0("deseq2_output/heatmap_", "top100", ".png"), plot = heatmap)
 ggsave(paste0("deseq2_output/heatmap_", "top100", ".pdf"), plot = heatmap)
-
-
-
